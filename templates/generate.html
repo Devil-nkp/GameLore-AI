@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Generate Game Content</h2>
+        <form action="/generate" method="POST">
+            <div class="mb-3">
+                <label class="form-label">Content Type</label>
+                <select name="content_type" class="form-select" required>
+                    <option value="storyline">Main Storyline</option>
+                    <option value="character">Character Bio (NPC/Hero)</option>
+                    <option value="quest">Quest / Mission Log</option>
+                    <option value="dialogue">NPC Dialogue Tree</option>
+                    <option value="marketing">Steam Page Description</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Genre / Art Style</label>
+                <input type="text" name="genre" class="form-control" placeholder="e.g. Cyberpunk, Low-poly Fantasy, 8-bit Horror" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Details & Requirements</label>
+                <textarea name="user_details" class="form-control" rows="5" placeholder="Describe the character, plot points, or specific requirements..." required></textarea>
+            </div>
+            
+            <div class="alert alert-info">
+                {% if user.sub_status == 'active' %}
+                    <strong>Pro Active:</strong> This generation is free.
+                {% else %}
+                    <strong>Cost:</strong> 1 Credit (You have {{ user.credits }})
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100" {% if user.credits < 1 and user.sub_status != 'active' %}disabled{% endif %}>
+                Generate Content 🚀
+            </button>
+            {% if user.credits < 1 and user.sub_status != 'active' %}
+                <div class="text-center mt-2">
+                    <a href="/payment">Top up credits</a>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
