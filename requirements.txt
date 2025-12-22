@@ -1,0 +1,7 @@
+flask
+requests
+stripe
+python-dotenv
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
