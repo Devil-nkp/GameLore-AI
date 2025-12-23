@@ -1,58 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-6xl mx-auto" x-data="{ 
-    loading: false, 
-    stage: 'Initializing...', 
-    progress: 0,
-    startLoading() {
-        this.loading = true;
-        this.progress = 5;
-        this.stage = 'Initializing Neural Network...';
-        setTimeout(() => { if(this.loading) { this.progress = 40; this.stage = 'Architecting Geometry...'; } }, 1000);
-        setTimeout(() => { if(this.loading) { this.progress = 70; this.stage = 'Rendering Textures...'; } }, 2500);
-        setTimeout(() => { if(this.loading) { this.progress = 90; this.stage = 'Finalizing Visuals...'; } }, 4500);
-    }
-}">
-    <div class="text-center mb-8">
-        <h1 class="text-4xl md:text-6xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 glow-text">Visual Genesis</h1>
-        <p class="text-slate-400">Phase 1: Generate High-Fidelity Visuals.</p>
+<div class="flex flex-col h-full md:max-w-6xl md:mx-auto md:p-6 w-full" 
+     x-data="{ 
+        loading: false, 
+        stage: '', 
+        progress: 0,
+        startLoading() {
+            this.loading = true;
+            this.progress = 5;
+            this.stage = 'Initializing Neural Network...';
+            setTimeout(() => { if(this.loading) { this.progress = 40; this.stage = 'Forging Geometry...'; } }, 1000);
+            setTimeout(() => { if(this.loading) { this.progress = 70; this.stage = 'Applying Textures...'; } }, 2500);
+            setTimeout(() => { if(this.loading) { this.progress = 90; this.stage = 'Finalizing Render...'; } }, 4500);
+        }
+     }">
+
+    <div class="text-center py-6 md:py-10 px-4">
+        <h1 class="text-4xl md:text-6xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 glow-text tracking-tight">
+            Visual Genesis
+        </h1>
+        <p class="text-slate-400 text-sm md:text-base">Phase 1: High-Fidelity Asset Generation</p>
     </div>
 
-    <div class="glass p-8 rounded-2xl shadow-2xl max-w-2xl mx-auto">
+    <div class="bg-slate-900/50 md:rounded-2xl border-y md:border border-white/5 p-6 md:p-8 w-full max-w-3xl mx-auto shadow-2xl">
         <form hx-post="/generate_visuals" hx-target="#output-stage" @submit="startLoading()" hx-on::after-request="loading = false">
-            <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Type</label>
-                    <select name="type" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 outline-none">
-                        <option value="Weapon">Weapon (Isolated)</option>
-                        <option value="Item">Item / Artifact</option>
-                        <option value="NPC">Character (NPC)</option>
-                        <option value="Location">Location</option>
-                    </select>
+                    <label class="block text-xs font-bold mb-2 text-purple-300 uppercase tracking-wider">Asset Type</label>
+                    <div class="relative">
+                        <select name="type" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none appearance-none font-medium">
+                            <option value="Weapon">⚔️ Weapon (Isolated)</option>
+                            <option value="Item">💎 Item / Artifact</option>
+                            <option value="NPC">👤 Character (NPC)</option>
+                            <option value="Location">🌍 Location</option>
+                        </select>
+                        <div class="absolute right-3 top-3 text-slate-400 pointer-events-none">▼</div>
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Style</label>
-                    <input type="text" name="genre" placeholder="e.g. Cyberpunk" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white">
+                    <label class="block text-xs font-bold mb-2 text-purple-300 uppercase tracking-wider">Art Style</label>
+                    <input type="text" name="genre" placeholder="e.g. Cyberpunk, Dark Fantasy" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none font-medium placeholder-slate-600">
                 </div>
             </div>
+            
             <div class="mb-6">
-                <label class="block text-sm font-bold mb-2 text-purple-300">Visual Details</label>
-                <textarea name="details" rows="3" placeholder="A glowing obsidian sword with red runes..." class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white"></textarea>
+                <label class="block text-xs font-bold mb-2 text-purple-300 uppercase tracking-wider">Specific Details</label>
+                <textarea name="details" rows="3" placeholder="Describe materials, colors, aura..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-purple-500 outline-none font-medium placeholder-slate-600 resize-none"></textarea>
             </div>
-            <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-xl font-bold text-xl hover:scale-105 transition text-white shadow-lg shadow-purple-900/50" :disabled="loading">
-                <span x-show="!loading">✨ Generate Concepts</span>
+
+            <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-95 transition text-white shadow-lg shadow-purple-900/50 flex items-center justify-center gap-2" :disabled="loading">
+                <span x-show="!loading">🚀 Generate Concepts</span>
                 <span x-show="loading" x-text="'Processing...'"></span>
             </button>
         </form>
     </div>
 
-    <div id="output-stage" class="mt-12 min-h-[400px]">
+    <div id="output-stage" class="flex-1 w-full max-w-6xl mx-auto mt-8 px-4 pb-20">
         <div x-show="loading" class="flex flex-col items-center justify-center pt-10" x-cloak>
-            <div class="w-full max-w-md bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
-                <div class="bg-purple-500 h-full transition-all duration-700 ease-out" :style="'width: ' + progress + '%'"></div>
+            <div class="w-full max-w-sm bg-slate-800 h-1.5 rounded-full overflow-hidden mb-4">
+                <div class="bg-purple-500 h-full transition-all duration-700 ease-out shadow-[0_0_10px_#a855f7]" :style="'width: ' + progress + '%'"></div>
             </div>
-            <div class="text-2xl font-bold text-white animate-pulse" x-text="stage"></div>
-            <p class="text-slate-500 mt-2 text-sm">Please wait while we forge your assets.</p>
+            <div class="text-xl font-bold text-white animate-pulse" x-text="stage"></div>
         </div>
     </div>
 </div>
