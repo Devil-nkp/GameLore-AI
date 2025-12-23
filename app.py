@@ -1,7 +1,7 @@
 import os
 import json
-import time
 import random
+import re
 import requests
 import stripe
 from datetime import datetime
@@ -19,7 +19,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
 
-# --- Database Config ---
+# --- Database & Config ---
 db_url = os.getenv("DATABASE_URL", "sqlite:///supreme_lore.db")
 if db_url.startswith("postgres://"): 
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -30,10 +30,11 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'home'
 
-# --- Integrations ---
+# --- Keys ---
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL") 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY") # NEW: For Video Search
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -63,8 +64,8 @@ class Generation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     type = db.Column(db.String(50))
     content = db.Column(db.Text)
-    # Changed to store a JSON list of multiple image URLs
     images = db.Column(db.Text, default="[]") 
+    video_url = db.Column(db.String(500)) # NEW: Video Link
     likes = db.Column(db.Integer, default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -75,48 +76,72 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# --- AI Logic ---
+# --- Helper Functions ---
+
+def clean_text(text):
+    """Removes markdown symbols (*, #, -) for clean output"""
+    text = re.sub(r'\*\*|__', '', text)  # Remove bold
+    text = re.sub(r'#+', '', text)       # Remove headers
+    text = re.sub(r'^\s*-\s+', '', text, flags=re.MULTILINE) # Remove list dashes
+    return text.strip()
+
+def get_video_preview(query):
+    """Fetches a relevant video URL from Pexels API"""
+    if not PEXELS_API_KEY: return None
+    try:
+        headers = {"Authorization": PEXELS_API_KEY}
+        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=landscape"
+        res = requests.get(url, headers=headers)
+        data = res.json()
+        if data['videos']:
+            # Get the HD video file link
+            video_files = data['videos'][0]['video_files']
+            # Find a medium quality one for speed
+            best_video = next((v for v in video_files if v['width'] >= 1280), video_files[0])
+            return best_video['link']
+    except Exception as e:
+        print(f"Video Error: {e}")
+    return None
 
 def generate_text_groq(content_type, genre, details):
-    """Generates deep lore using Llama 3.1"""
+    """Faster Llama 3.1 generation"""
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     
+    # Prompt optimized for speed and cleanliness
     system_prompt = (
-        "You are a Senior Game Designer. Output strictly in Markdown. "
-        "Structure: 1. Visuals 2. Lore 3. Mechanics. "
-        "Be creative, unique, and professional."
+        "You are a Game Writer. Output ONLY plain text paragraphs. "
+        "Do NOT use asterisks, hashes, or bullet points. "
+        "Be concise, creative, and fast."
     )
-    user_prompt = f"Create a {content_type} for a {genre} game. Details: {details}."
+    user_prompt = f"Write a {content_type} description for a {genre} game. Context: {details}."
     
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": "llama-3.1-70b-versatile", # Faster model
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "temperature": 0.8
+        "temperature": 0.7,
+        "max_tokens": 600 # Limit length for speed
     }
     
     try:
         res = requests.post(url, headers=headers, json=data)
         if res.status_code == 200:
-            return res.json()['choices'][0]['message']['content']
+            raw_text = res.json()['choices'][0]['message']['content']
+            return clean_text(raw_text)
     except Exception as e:
         print(f"Groq Error: {e}")
-    return "AI Generation failed."
+    return "Generation failed."
 
-def generate_multiple_images(description, count=4):
-    """Generates multiple unique variants using random seeds"""
+def generate_images(description, count=3):
     image_list = []
-    base_prompt = quote(f"concept art, video game asset, {description}")
-    
+    base_prompt = quote(f"concept art, {description}")
     for i in range(count):
-        seed = random.randint(1000, 9999)
-        # We append the seed to the URL to force a different image
+        seed = random.randint(100, 9999)
         url = f"https://image.pollinations.ai/prompt/{base_prompt}?width=512&height=512&nologo=true&seed={seed}"
         image_list.append(url)
-        
     return json.dumps(image_list)
 
 # --- Routes ---
@@ -129,8 +154,7 @@ def home():
     return render_template('home.html', total_likes=total_likes)
 
 @app.route('/about')
-def about():
-    return render_template('about.html')
+def about(): return render_template('about.html')
 
 @app.route('/login/google')
 def google_login():
@@ -161,12 +185,9 @@ def logout():
 def dashboard():
     badges = json.loads(current_user.badges)
     recent_gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
-    # Pre-process images for template
     for gen in recent_gens:
-        try:
-            gen.image_list = json.loads(gen.images)
-        except:
-            gen.image_list = []
+        try: gen.image_list = json.loads(gen.images)
+        except: gen.image_list = []
     return render_template('dashboard.html', user=current_user, badges=badges, recent_gens=recent_gens)
 
 @app.route('/generate', methods=['GET', 'POST'])
@@ -180,35 +201,29 @@ def generate():
 
     data = request.form
     
-    # 1. Generate Text
+    # Parallel-like Execution
     text_content = generate_text_groq(data.get('type'), data.get('genre'), data.get('details'))
-    
-    # 2. Generate 4 Images
-    images_json = generate_multiple_images(f"{data.get('type')} {data.get('genre')} {data.get('details')[:80]}")
+    images_json = generate_images(f"{data.get('type')} {data.get('genre')}", count=3)
+    video_url = get_video_preview(f"{data.get('genre')} {data.get('type')}") # Get Video
 
-    # 3. Credits & XP
-    if not current_user.is_pro:
-        current_user.credits -= 1
-    
+    # Stats
+    if not current_user.is_pro: current_user.credits -= 1
     current_user.xp += 10
     badges = json.loads(current_user.badges)
-    if current_user.xp >= 50 and "Scribe" not in badges:
-        badges.append("Scribe")
+    if current_user.xp >= 50 and "Scribe" not in badges: badges.append("Scribe")
     current_user.badges = json.dumps(badges)
 
-    # 4. Save
     gen = Generation(
         user_id=current_user.id, 
         type=data.get('type'), 
         content=text_content, 
-        images=images_json 
+        images=images_json,
+        video_url=video_url
     )
     db.session.add(gen)
     db.session.commit()
     
-    # Attach list for the immediate view
     gen.image_list = json.loads(images_json)
-    
     return render_template('partials/result_card.html', gen=gen)
 
 @app.route('/like/<int:gen_id>', methods=['POST'])
@@ -219,55 +234,21 @@ def like_content(gen_id):
     db.session.commit()
     return f"""<button class="flex items-center gap-1 text-pink-500 font-bold" disabled>❤️ {gen.likes}</button>"""
 
-# --- Download Routes ---
-
-@app.route('/download_json/<int:gen_id>')
-@login_required
-def download_json(gen_id):
-    gen = Generation.query.get_or_404(gen_id)
-    if gen.user_id != current_user.id: return "Unauthorized", 403
-    
-    data = {
-        "id": gen.id, 
-        "type": gen.type, 
-        "content": gen.content,
-        "images": json.loads(gen.images)
-    }
-    return send_file(
-        io.BytesIO(json.dumps(data, indent=4).encode()),
-        mimetype='application/json',
-        as_attachment=True,
-        download_name=f"gamelore_{gen.id}.json"
-    )
-
 @app.route('/download_text/<int:gen_id>')
 @login_required
 def download_text(gen_id):
-    """Download plain text file"""
     gen = Generation.query.get_or_404(gen_id)
     if gen.user_id != current_user.id: return "Unauthorized", 403
-    
-    return Response(
-        gen.content,
-        mimetype="text/plain",
-        headers={"Content-disposition": f"attachment; filename=gamelore_{gen.id}.txt"}
-    )
+    return Response(gen.content, mimetype="text/plain", headers={"Content-disposition": f"attachment; filename=gamelore_{gen.id}.txt"})
 
 @app.route('/share_discord/<int:gen_id>', methods=['POST'])
 @login_required
 def share_discord(gen_id):
     gen = Generation.query.get_or_404(gen_id)
     if DISCORD_WEBHOOK_URL:
-        # Get first image for preview
-        imgs = json.loads(gen.images)
-        first_img = imgs[0] if imgs else ""
-        
-        payload = {
-            "content": f"🚀 **New Creation by {current_user.name}**\nType: {gen.type}\nLikes: {gen.likes}\n{first_img}"
-        }
-        requests.post(DISCORD_WEBHOOK_URL, json=payload)
-        return "<span class='text-green-400 text-sm font-bold'>Shared!</span>"
-    return "<span class='text-red-400 text-sm'>Not configured.</span>"
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": f"🚀 **New Creation**\n{gen.type}\n{gen.video_url if gen.video_url else 'No Video'}"})
+        return "<span class='text-green-400 text-sm'>Shared!</span>"
+    return "<span class='text-red-400 text-sm'>Error</span>"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
