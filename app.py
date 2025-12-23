@@ -34,7 +34,7 @@ login_manager.login_view = 'home'
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL") 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY") # NEW: For Video Search
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY") 
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -54,7 +54,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True)
     name = db.Column(db.String(100))
-    credits = db.Column(db.Integer, default=5)
+    credits = db.Column(db.Integer, default=10) # Increased credits
     xp = db.Column(db.Integer, default=0) 
     is_pro = db.Column(db.Boolean, default=False)
     badges = db.Column(db.Text, default="[]") 
@@ -65,7 +65,7 @@ class Generation(db.Model):
     type = db.Column(db.String(50))
     content = db.Column(db.Text)
     images = db.Column(db.Text, default="[]") 
-    video_url = db.Column(db.String(500)) # NEW: Video Link
+    video_url = db.Column(db.String(500))
     likes = db.Column(db.Integer, default=0)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -76,73 +76,100 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# --- Helper Functions ---
+# --- PRECISION AI ENGINES ---
 
 def clean_text(text):
-    """Removes markdown symbols (*, #, -) for clean output"""
-    text = re.sub(r'\*\*|__', '', text)  # Remove bold
-    text = re.sub(r'#+', '', text)       # Remove headers
-    text = re.sub(r'^\s*-\s+', '', text, flags=re.MULTILINE) # Remove list dashes
+    """Aggressively cleans text to be plain and readable"""
+    text = re.sub(r'\*\*|__', '', text) # Remove bold
+    text = re.sub(r'#+', '', text)      # Remove headers
+    text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE) # Nice bullets
     return text.strip()
 
-def get_video_preview(query):
-    """Fetches a relevant video URL from Pexels API"""
+def get_video_preview(content_type, genre):
+    """
+    SMART VIDEO LOGIC:
+    Searching for specific items (e.g. "Void Sword") returns bad stock footage.
+    Instead, we search for the GENRE Atmosphere (e.g. "Cyberpunk Background")
+    to give the user a 'Vibe Check' video that is always relevant/high quality.
+    """
     if not PEXELS_API_KEY: return None
     try:
+        # Search for the MOOD, not the item.
+        query = f"{genre} cinematic background loop"
+        
         headers = {"Authorization": PEXELS_API_KEY}
-        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=landscape"
-        res = requests.get(url, headers=headers)
+        url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=landscape&size=medium"
+        res = requests.get(url, headers=headers, timeout=3)
         data = res.json()
-        if data['videos']:
-            # Get the HD video file link
+        
+        if data.get('videos'):
             video_files = data['videos'][0]['video_files']
-            # Find a medium quality one for speed
-            best_video = next((v for v in video_files if v['width'] >= 1280), video_files[0])
-            return best_video['link']
-    except Exception as e:
-        print(f"Video Error: {e}")
+            # Get a lightweight HD file for fast loading
+            best = next((v for v in video_files if v['width'] >= 1280 and v['width'] < 2000), video_files[0])
+            return best['link']
+    except:
+        pass
     return None
 
-def generate_text_groq(content_type, genre, details):
-    """Faster Llama 3.1 generation"""
+def generate_images_precise(content_type, genre, details, count=3):
+    """
+    PRECISION IMAGE PROMPTING:
+    Forces the AI to draw exactly what is asked by prepending structural keywords.
+    """
+    image_list = []
+    
+    # 1. Define strict prefixes based on type
+    prefix = ""
+    if content_type == "Item" or content_type == "Weapon":
+        prefix = "isolated object, 3d render, white background, single weapon asset, detailed product shot, "
+    elif content_type == "NPC":
+        prefix = "character portrait, face closeup, rpg character art, detailed, looking at camera, "
+    elif content_type == "Location":
+        prefix = "wide shot, environment concept art, landscape, detailed scenery, "
+    
+    # 2. Build the full prompt
+    full_prompt = f"{prefix} {genre} style, {details}"
+    encoded_prompt = quote(full_prompt)
+    
+    # 3. Generate variants
+    for i in range(count):
+        seed = random.randint(100, 99999)
+        # Using Pollinations with 'nologo' and specific seed
+        url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={seed}&model=flux"
+        image_list.append(url)
+        
+    return json.dumps(image_list)
+
+def generate_text_fast(content_type, genre, details):
+    """Uses Llama 3 8B Instant for sub-1-second responses"""
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
     
-    # Prompt optimized for speed and cleanliness
     system_prompt = (
-        "You are a Game Writer. Output ONLY plain text paragraphs. "
-        "Do NOT use asterisks, hashes, or bullet points. "
-        "Be concise, creative, and fast."
+        "You are an expert Game Writer. "
+        "Output CLEAN plain text only. No markdown formatting (*, #). "
+        "Structure: 1. Visual Description. 2. Lore/Backstory. 3. Stats/Abilities. "
+        "Keep it concise and punchy."
     )
-    user_prompt = f"Write a {content_type} description for a {genre} game. Context: {details}."
+    user_prompt = f"Write about a {content_type} in a {genre} setting. Details: {details}"
     
     data = {
-        "model": "llama-3.1-70b-versatile", # Faster model
+        "model": "llama-3.1-8b-instant", # The Fastest Model
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.7,
-        "max_tokens": 600 # Limit length for speed
+        "max_tokens": 500
     }
     
     try:
         res = requests.post(url, headers=headers, json=data)
         if res.status_code == 200:
-            raw_text = res.json()['choices'][0]['message']['content']
-            return clean_text(raw_text)
+            return clean_text(res.json()['choices'][0]['message']['content'])
     except Exception as e:
         print(f"Groq Error: {e}")
-    return "Generation failed."
-
-def generate_images(description, count=3):
-    image_list = []
-    base_prompt = quote(f"concept art, {description}")
-    for i in range(count):
-        seed = random.randint(100, 9999)
-        url = f"https://image.pollinations.ai/prompt/{base_prompt}?width=512&height=512&nologo=true&seed={seed}"
-        image_list.append(url)
-    return json.dumps(image_list)
+    return "Generation failed. Please try again."
 
 # --- Routes ---
 
@@ -201,14 +228,16 @@ def generate():
 
     data = request.form
     
-    # Parallel-like Execution
-    text_content = generate_text_groq(data.get('type'), data.get('genre'), data.get('details'))
-    images_json = generate_images(f"{data.get('type')} {data.get('genre')}", count=3)
-    video_url = get_video_preview(f"{data.get('genre')} {data.get('type')}") # Get Video
+    # Execute Generators
+    text_content = generate_text_fast(data.get('type'), data.get('genre'), data.get('details'))
+    # Use the new Precise Image Logic
+    images_json = generate_images_precise(data.get('type'), data.get('genre'), data.get('details'), count=3)
+    # Use the new Ambient Video Logic
+    video_url = get_video_preview(data.get('type'), data.get('genre'))
 
-    # Stats
+    # Credits & XP
     if not current_user.is_pro: current_user.credits -= 1
-    current_user.xp += 10
+    current_user.xp += 15 # More XP
     badges = json.loads(current_user.badges)
     if current_user.xp >= 50 and "Scribe" not in badges: badges.append("Scribe")
     current_user.badges = json.dumps(badges)
@@ -246,9 +275,10 @@ def download_text(gen_id):
 def share_discord(gen_id):
     gen = Generation.query.get_or_404(gen_id)
     if DISCORD_WEBHOOK_URL:
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": f"🚀 **New Creation**\n{gen.type}\n{gen.video_url if gen.video_url else 'No Video'}"})
+        # Send text preview
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": f"🚀 **New Creation**\nType: {gen.type}\n\n{gen.content[:200]}..."})
         return "<span class='text-green-400 text-sm'>Shared!</span>"
-    return "<span class='text-red-400 text-sm'>Error</span>"
+    return "<span class='text-red-400 text-sm'>Config Error</span>"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
