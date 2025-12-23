@@ -31,7 +31,7 @@ login_manager.login_view = 'home'
 
 # --- Keys ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # Optional: For AI Video
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True)
     name = db.Column(db.String(100))
-    credits = db.Column(db.Integer, default=15) # Generous start
+    credits = db.Column(db.Integer, default=15)
     xp = db.Column(db.Integer, default=0) 
     is_pro = db.Column(db.Boolean, default=False)
 
@@ -76,18 +76,20 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# --- Logic: Prompt Architect ---
+# --- Logic: Prompt Architect (Fixed Accuracy) ---
 def construct_precision_prompt(content_type, genre, details):
-    """Enforces strict visual rules based on asset type."""
+    """Enforces strict visual rules."""
     base = f"{genre} style, {details}"
+    
+    # We prepend specific "Negative Prompts" naturally by describing what IS there.
     if content_type == "Weapon":
-        return f"isolated single weapon asset, {base}, 3d render, blender style, plain white background, high detail, no characters, no hands"
+        return f"detailed 3d render of a single isolated weapon, {base}, plain background, studio lighting, unreal engine 5, centered, high quality, NO HUMANS, NO HANDS, NO CHARACTERS"
     elif content_type == "Item":
-        return f"isolated game item icon, {base}, digital painting, magical glow, plain background, centric composition, no text"
+        return f"detailed 3d render of a single game item icon, {base}, magical glow, plain dark background, centric composition, digital art, NO TEXT, NO UI"
     elif content_type == "NPC":
-        return f"character concept art, portrait of {base}, looking at camera, detailed face, upper body, rpg style, dynamic lighting"
+        return f"detailed character portrait, {base}, looking at camera, highly detailed face, upper body shot, rpg style, dynamic lighting, masterpiece"
     elif content_type == "Location":
-        return f"wide shot, environmental concept art, {base}, atmospheric, cinematic lighting, unreal engine 5, 8k"
+        return f"wide cinematic shot of a location, {base}, environmental concept art, atmospheric, detailed scenery, 8k resolution, no text"
     return base
 
 def clean_text(text):
@@ -96,13 +98,16 @@ def clean_text(text):
     text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
     return text.strip()
 
-# --- Logic: Generators ---
+# --- Logic: Generators (Fixed Broken Images) ---
 def generate_images_pollinations(prompt, count=4):
     images = []
-    encoded = quote(prompt)
+    # Using 'flux' model which is more reliable than default
+    # Adding 'enhance=false' so it doesn't mess up our strict prompt
     for i in range(count):
         seed = random.randint(1, 99999)
-        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&seed={seed}&nologo=true&model=flux"
+        # Clean the prompt for URL safety
+        safe_prompt = quote(prompt)
+        url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=1024&seed={seed}&nologo=true&model=flux&enhance=false"
         images.append(url)
     return images
 
@@ -176,7 +181,6 @@ def dashboard():
     gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
     return render_template('dashboard.html', user=current_user, gens=gens)
 
-# PHASE 1: Visuals
 @app.route('/generate_visuals', methods=['GET', 'POST'])
 @login_required
 def generate_visuals():
@@ -188,7 +192,6 @@ def generate_visuals():
                            images=image_urls, prompt_base=precise_prompt,
                            c_type=data.get('type'), c_genre=data.get('genre'), c_details=data.get('details'))
 
-# PHASE 2: Finalize
 @app.route('/finalize_creation', methods=['POST'])
 @login_required
 def finalize_creation():
@@ -203,7 +206,6 @@ def finalize_creation():
     db.session.commit()
     return render_template('partials/final_result.html', gen=gen)
 
-# PHASE 3: Video
 @app.route('/create_video/<int:gen_id>', methods=['POST'])
 @login_required
 def create_video(gen_id):
@@ -218,4 +220,3 @@ def create_video(gen_id):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
