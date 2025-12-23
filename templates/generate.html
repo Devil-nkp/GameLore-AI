@@ -2,55 +2,53 @@
 {% block content %}
 <div class="max-w-6xl mx-auto" x-data="{ loading: false }">
     <div class="text-center mb-8">
-        <h1 class="text-3xl md:text-5xl font-extrabold mb-2 glow-text text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">The Dream Lab</h1>
-        <p class="text-slate-400 text-sm md:text-base">Conjure 4 variants + Deep Lore instantly.</p>
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-2 glow-text text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+            Supreme Engine
+        </h1>
+        <p class="text-slate-400">Instant Clean Text + Video + 3 Images.</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="glass p-6 rounded-xl shadow-2xl h-fit">
             <form hx-post="/generate" 
                   hx-target="#result-area" 
-                  @submit="loading = true"
+                  @submit="loading = true" 
                   hx-on::after-request="loading = false">
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Artifact Type</label>
-                    <select name="type" class="w-full bg-slate-800 border border-slate-600 rounded p-3 focus:ring-2 focus:ring-purple-500 outline-none text-white">
+                    <label class="block text-sm font-bold mb-2 text-purple-300">Type</label>
+                    <select name="type" class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white">
                         <option value="NPC">NPC Character</option>
                         <option value="Quest">Side Quest</option>
-                        <option value="Item">Legendary Weapon</option>
+                        <option value="Item">Weapon</option>
                         <option value="Location">Environment</option>
                     </select>
                 </div>
-
                 <div class="mb-4">
                     <label class="block text-sm font-bold mb-2 text-purple-300">Genre</label>
-                    <input type="text" name="genre" placeholder="e.g. Cyberpunk Noir" class="w-full bg-slate-800 border border-slate-600 rounded p-3 focus:ring-2 focus:ring-purple-500 outline-none text-white">
+                    <input type="text" name="genre" placeholder="e.g. Cyberpunk" class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white">
                 </div>
-
                 <div class="mb-6">
-                    <label class="block text-sm font-bold mb-2 text-purple-300">The Vision</label>
-                    <textarea name="details" rows="4" placeholder="Describe the essence..." class="w-full bg-slate-800 border border-slate-600 rounded p-3 focus:ring-2 focus:ring-purple-500 outline-none text-white"></textarea>
+                    <label class="block text-sm font-bold mb-2 text-purple-300">Details</label>
+                    <textarea name="details" rows="3" placeholder="Description..." class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white"></textarea>
                 </div>
 
-                <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-lg font-bold text-lg hover:scale-105 transition transform shadow-lg shadow-purple-900/50 text-white disabled:opacity-50" :disabled="loading">
-                    <span x-show="!loading">✨ Conjure Content</span>
-                    <span x-show="loading">Weaving Magic...</span>
+                <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-lg font-bold text-lg hover:scale-105 transition text-white" :disabled="loading">
+                    <span x-show="!loading">🚀 Launch Generation</span>
+                    <span x-show="loading">Processing...</span>
                 </button>
             </form>
         </div>
 
         <div class="glass p-6 rounded-xl flex flex-col min-h-[500px] relative overflow-hidden bg-slate-800/30">
-            
             <div x-show="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 z-20">
                 <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p class="text-purple-300 animate-pulse font-bold">Summoning multiple timelines...</p>
+                <p class="text-purple-300 animate-pulse font-bold">Forging Assets...</p>
             </div>
-
             <div id="result-area" class="w-full h-full">
                 <div class="flex flex-col items-center justify-center h-full text-slate-500">
-                    <div class="text-6xl mb-4 opacity-30">🔮</div>
-                    <p>Results will manifest here.</p>
+                    <div class="text-6xl mb-4 opacity-30">⚡</div>
+                    <p>Awaiting Input.</p>
                 </div>
             </div>
         </div>
