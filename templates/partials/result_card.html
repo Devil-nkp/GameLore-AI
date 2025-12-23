@@ -1,33 +1,39 @@
 <div class="animate-fade-in-up h-full flex flex-col">
+    
     <div class="grid grid-cols-2 gap-2 mb-4">
+        {% if gen.video_url %}
+        <div class="relative group aspect-square col-span-2 md:col-span-1 cursor-pointer overflow-hidden rounded-lg border border-slate-700"
+             @click="modalOpen = true; modalSrc = '{{ gen.video_url }}'; modalType = 'video'">
+            <video src="{{ gen.video_url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" muted loop autoplay></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-transparent transition">
+                <span class="text-4xl text-white group-hover:scale-110 transition">▶️</span>
+            </div>
+            <div class="absolute bottom-1 right-1 bg-black/70 px-2 py-1 rounded text-xs text-white font-bold">VIDEO PREVIEW</div>
+        </div>
+        {% endif %}
+
         {% for img in gen.image_list %}
-        <div class="relative group aspect-square">
-            <img src="{{ img }}" class="w-full h-full object-cover rounded-lg border border-slate-700 bg-black">
-            <a href="{{ img }}" download target="_blank" class="absolute bottom-1 right-1 bg-black/70 p-1 rounded hover:bg-purple-600 transition text-white">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            </a>
+        <div class="relative group aspect-square cursor-pointer" 
+             @click="modalOpen = true; modalSrc = '{{ img }}'; modalType = 'image'">
+            <img src="{{ img }}" class="w-full h-full object-cover rounded-lg border border-slate-700 bg-black group-hover:brightness-110 transition">
+            <div class="absolute bottom-1 right-1 bg-black/70 p-1 rounded text-white opacity-0 group-hover:opacity-100 transition">
+                🔍
+            </div>
         </div>
         {% endfor %}
     </div>
 
     <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+        <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="text-pink-400 font-bold text-sm bg-slate-800 px-3 py-1 rounded-full border border-pink-500/30">
+            ❤️ {{ gen.likes }}
+        </button>
         <div class="flex gap-2">
-            <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="text-pink-400 font-bold text-sm bg-slate-800 px-3 py-1 rounded-full border border-pink-500/30">
-                ❤️ {{ gen.likes }}
-            </button>
-        </div>
-        <div class="flex gap-2">
-            <a href="/download_text/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition flex items-center gap-1">
-                📄 Text
-            </a>
-            <a href="/download_json/{{ gen.id }}" class="text-xs bg-indigo-900 hover:bg-indigo-800 px-2 py-1 rounded text-white transition flex items-center gap-1">
-                ⚙️ JSON
-            </a>
+            <a href="/download_text/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">📄 Clean Text</a>
             <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-purple-600 hover:bg-purple-500 px-2 py-1 rounded text-white transition">Share</button>
         </div>
     </div>
     
-    <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1">
-        {{ gen.content | safe }}
+    <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1 whitespace-pre-wrap font-sans leading-relaxed">
+{{ gen.content }}
     </div>
 </div>
