@@ -6,8 +6,8 @@
         {% if gens %}
             {% for gen in gens %}
             <div class="glass p-6 rounded-xl border border-slate-700 flex flex-col md:flex-row gap-6">
-                <div class="w-32 h-32 shrink-0 rounded-lg overflow-hidden border border-slate-600">
-                    <img src="{{ gen.selected_image }}" class="w-full h-full object-cover">
+                <div class="w-32 h-32 shrink-0 rounded-lg overflow-hidden border border-slate-600 cursor-pointer" @click="modalOpen = true; modalSrc = '{{ gen.selected_image }}'">
+                    <img src="{{ gen.selected_image }}" class="w-full h-full object-cover hover:scale-110 transition">
                 </div>
                 <div class="flex-1">
                     <div class="flex justify-between items-start mb-2">
