@@ -1,7 +1,9 @@
 flask
+flask-sqlalchemy
+flask-login
 requests
 stripe
 python-dotenv
-flask-sqlalchemy
+authlib
 gunicorn
 psycopg2-binary
