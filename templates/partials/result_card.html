@@ -1,14 +1,17 @@
 <div class="animate-fade-in-up h-full flex flex-col">
     
     <div class="grid grid-cols-2 gap-2 mb-4">
+        
         {% if gen.video_url %}
-        <div class="relative group aspect-square col-span-2 md:col-span-1 cursor-pointer overflow-hidden rounded-lg border border-slate-700"
+        <div class="relative group aspect-square col-span-2 md:col-span-1 cursor-pointer overflow-hidden rounded-lg border border-slate-700 bg-black"
              @click="modalOpen = true; modalSrc = '{{ gen.video_url }}'; modalType = 'video'">
-            <video src="{{ gen.video_url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" muted loop autoplay></video>
-            <div class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-transparent transition">
-                <span class="text-4xl text-white group-hover:scale-110 transition">▶️</span>
+            <video src="{{ gen.video_url }}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition" muted loop autoplay></video>
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span class="text-4xl text-white group-hover:scale-125 transition drop-shadow-lg">▶️</span>
             </div>
-            <div class="absolute bottom-1 right-1 bg-black/70 px-2 py-1 rounded text-xs text-white font-bold">VIDEO PREVIEW</div>
+            <div class="absolute top-2 left-2 bg-purple-600/80 px-2 py-1 rounded text-[10px] text-white font-bold uppercase tracking-wider">
+                Ambient Mood
+            </div>
         </div>
         {% endif %}
 
@@ -16,8 +19,8 @@
         <div class="relative group aspect-square cursor-pointer" 
              @click="modalOpen = true; modalSrc = '{{ img }}'; modalType = 'image'">
             <img src="{{ img }}" class="w-full h-full object-cover rounded-lg border border-slate-700 bg-black group-hover:brightness-110 transition">
-            <div class="absolute bottom-1 right-1 bg-black/70 p-1 rounded text-white opacity-0 group-hover:opacity-100 transition">
-                🔍
+            <div class="absolute bottom-1 right-1 bg-black/60 p-1.5 rounded text-white opacity-0 group-hover:opacity-100 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
             </div>
         </div>
         {% endfor %}
@@ -28,12 +31,14 @@
             ❤️ {{ gen.likes }}
         </button>
         <div class="flex gap-2">
-            <a href="/download_text/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">📄 Clean Text</a>
-            <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-purple-600 hover:bg-purple-500 px-2 py-1 rounded text-white transition">Share</button>
+            <a href="/download_text/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition flex items-center gap-1">
+                💾 Save Text
+            </a>
+            <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-white transition">Share</button>
         </div>
     </div>
     
-    <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1 whitespace-pre-wrap font-sans leading-relaxed">
+    <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1 whitespace-pre-wrap font-sans leading-relaxed selection:bg-purple-500 selection:text-white">
 {{ gen.content }}
     </div>
 </div>
