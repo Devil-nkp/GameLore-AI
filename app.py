@@ -1,3 +1,4 @@
+
 import os
 import json
 import random
@@ -12,14 +13,14 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from sqlalchemy.sql import func
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
-import io
 
+# Load Env
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
+app.secret_key = os.getenv("SECRET_KEY", "super_secret_key_change_this")
 
-# --- Configuration ---
+# --- Database Config ---
 db_url = os.getenv("DATABASE_URL", "sqlite:///supreme_lore.db")
 if db_url.startswith("postgres://"): 
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -30,14 +31,14 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'home'
 
-# --- Keys ---
-# Get keys: https://console.groq.com/ | https://replicate.com/
+# --- API Keys ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # NEW: For Real AI Video
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # For Video
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
+# --- OAuth ---
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
@@ -59,37 +60,31 @@ class User(UserMixin, db.Model):
     credits = db.Column(db.Integer, default=10)
     xp = db.Column(db.Integer, default=0) 
     is_pro = db.Column(db.Boolean, default=False)
-    badges = db.Column(db.Text, default="[]") 
 
 class Generation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     type = db.Column(db.String(50))
     prompt_used = db.Column(db.Text)
-    content = db.Column(db.Text) # Lore
-    selected_image = db.Column(db.String(500)) # The final chosen image
-    video_url = db.Column(db.String(500)) # Generated Video
-    likes = db.Column(db.Integer, default=0)
+    content = db.Column(db.Text) # The Lore
+    selected_image = db.Column(db.String(500)) # The Chosen Image
+    video_url = db.Column(db.String(500)) # The Video
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Create Tables on Startup
 with app.app_context():
     db.create_all()
 
-# --- INTELLIGENT PROMPT ARCHITECT ---
+# --- Logic Functions ---
 
 def construct_precision_prompt(content_type, genre, details):
-    """
-    Rewrites the prompt to force the AI to ignore irrelevant concepts.
-    This fixes the 'House vs Weapon' issue.
-    """
+    """Architects the prompt to prevent 'Person instead of Weapon' errors"""
     base = f"{genre} style, {details}"
-    
     if content_type == "Weapon":
-        # Force isolation
         return f"isolated single weapon asset, {base}, 3d render, blender style, plain white background, high detail, no characters, no hands, object focus"
     elif content_type == "Item":
         return f"isolated game item icon, {base}, digital painting, magical glow, plain background, centric composition, no text"
@@ -97,7 +92,6 @@ def construct_precision_prompt(content_type, genre, details):
         return f"character concept art, portrait of {base}, looking at camera, detailed face, upper body, rpg style, dynamic lighting"
     elif content_type == "Location":
         return f"wide shot, environmental concept art, {base}, atmospheric, cinematic lighting, unreal engine 5, 8k"
-    
     return base
 
 def clean_text(text):
@@ -106,22 +100,19 @@ def clean_text(text):
     text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
     return text.strip()
 
-# --- AI ENGINES ---
-
 def generate_images_pollinations(prompt, count=4):
-    """Generates 4 variants using Pollinations (Flux model)"""
+    """Generates 4 visual concepts"""
     images = []
     encoded = quote(prompt)
     for i in range(count):
         seed = random.randint(1, 99999)
-        # We use 'nologo' and 'private' to get clean results
         url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&seed={seed}&nologo=true&model=flux"
         images.append(url)
     return images
 
 def generate_lore_groq(content_type, genre, details):
-    """Generates the deep analysis text"""
-    if not GROQ_API_KEY: return "Error: Groq Key Missing"
+    """Generates Deep Lore"""
+    if not GROQ_API_KEY: return "Error: GROQ_API_KEY missing in Environment."
     
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
@@ -143,36 +134,26 @@ def generate_lore_groq(content_type, genre, details):
     return "Error"
 
 def generate_video_replicate(image_url):
-    """
-    Real AI Video Generation using Stability AI via Replicate.
-    If no key is provided, returns None (Frontend handles fallback).
-    """
-    if not REPLICATE_API_TOKEN:
-        return None
+    """Generates Video via Replicate (Requires Key)"""
+    if not REPLICATE_API_TOKEN: return None
     
     headers = {"Authorization": f"Token {REPLICATE_API_TOKEN}", "Content-Type": "application/json"}
-    
-    # Start Prediction
     data = {
-        "version": "1446844794ad193ee054152331572c638202521c402120b08064402633000570", # SVD 1.1
+        "version": "1446844794ad193ee054152331572c638202521c402120b08064402633000570",
         "input": {"input_image": image_url, "video_length": "14_frames_with_svd_xt", "frames_per_second": 6}
     }
     
     try:
         req = requests.post("https://api.replicate.com/v1/predictions", json=data, headers=headers)
         if req.status_code != 201: return None
+        get_url = req.json()['urls']['get']
         
-        prediction = req.json()
-        get_url = prediction['urls']['get']
-        
-        # Poll for result (Simple polling for demo)
-        for _ in range(20): # Wait up to 20 seconds (usually takes more, but this is a demo)
+        # Simple Polling
+        for _ in range(15): 
             time.sleep(2)
             check = requests.get(get_url, headers=headers).json()
-            if check['status'] == 'succeeded':
-                return check['output']
-            if check['status'] == 'failed':
-                return None
+            if check['status'] == 'succeeded': return check['output']
+            if check['status'] == 'failed': return None
     except:
         return None
     return None
@@ -183,6 +164,9 @@ def generate_video_replicate(image_url):
 def home():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
     return render_template('home.html')
+
+@app.route('/about')
+def about(): return render_template('about.html')
 
 @app.route('/login/google')
 def google_login():
@@ -213,84 +197,57 @@ def dashboard():
     gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
     return render_template('dashboard.html', user=current_user, gens=gens)
 
-# --- STEP 1: Generate Images Only ---
+# PHASE 1: Generate Visuals
 @app.route('/generate_visuals', methods=['GET', 'POST'])
 @login_required
 def generate_visuals():
     if request.method == 'GET': return render_template('generate.html')
-    
     data = request.form
-    # 1. Architect the Prompt
     precise_prompt = construct_precision_prompt(data.get('type'), data.get('genre'), data.get('details'))
-    
-    # 2. Generate 4 Visual Options
     image_urls = generate_images_pollinations(precise_prompt, count=4)
-    
-    # Return HTML Grid to swap
+    # Renders the new Selection Partial
     return render_template('partials/image_selection.html', 
-                           images=image_urls, 
-                           prompt_base=precise_prompt,
-                           c_type=data.get('type'),
-                           c_genre=data.get('genre'),
-                           c_details=data.get('details'))
+                           images=image_urls, prompt_base=precise_prompt,
+                           c_type=data.get('type'), c_genre=data.get('genre'), c_details=data.get('details'))
 
-# --- STEP 2: Analyze & Finalize ---
+# PHASE 2: Finalize
 @app.route('/finalize_creation', methods=['POST'])
 @login_required
 def finalize_creation():
     data = request.form
     selected_image = data.get('selected_image')
-    
-    # 1. Generate Deep Lore
     lore = generate_lore_groq(data.get('type'), data.get('genre'), data.get('details'))
     
-    # 2. Save to DB
     gen = Generation(
-        user_id=current_user.id,
-        type=data.get('type'),
-        prompt_used=data.get('prompt_base'),
-        content=lore,
-        selected_image=selected_image
+        user_id=current_user.id, type=data.get('type'),
+        prompt_used=data.get('prompt_base'), content=lore, selected_image=selected_image
     )
-    
     if not current_user.is_pro: current_user.credits -= 1
     current_user.xp += 20
     db.session.add(gen)
     db.session.commit()
-    
     return render_template('partials/final_result.html', gen=gen)
 
-# --- STEP 3: Create Video ---
+# PHASE 3: Create Video
 @app.route('/create_video/<int:gen_id>', methods=['POST'])
 @login_required
 def create_video(gen_id):
     gen = Generation.query.get_or_404(gen_id)
-    
-    # Try Real AI Video
     video_url = generate_video_replicate(gen.selected_image)
     
     if video_url:
         gen.video_url = video_url
         db.session.commit()
-        return f"""
-        <video src="{video_url}" controls autoplay loop class="w-full rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]"></video>
-        """
+        return f"""<video src="{video_url}" controls autoplay loop class="w-full rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]"></video>"""
     else:
-        # Fallback to CSS Animation (Immediate)
-        return """
+        # Fallback CSS Animation
+        return f"""
         <div class="relative w-full aspect-square overflow-hidden rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]">
-            <img src="{}" class="w-full h-full object-cover animate-ken-burns">
+            <img src="{gen.selected_image}" class="w-full h-full object-cover animate-ken-burns">
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Simulated Motion</div>
         </div>
-        <style>
-            @keyframes ken-burns {
-                0% { transform: scale(1) translate(0, 0); }
-                50% { transform: scale(1.1) translate(-2%, -2%); }
-                100% { transform: scale(1) translate(0, 0); }
-            }
-            .animate-ken-burns { animation: ken-burns 15s ease-in-out infinite alternate; }
-        </style>
-        """.format(gen.selected_image)
+        <style>.animate-ken-burns {{ animation: ken-burns 15s ease-in-out infinite alternate; }} @keyframes ken-burns {{ 0% {{ transform: scale(1); }} 100% {{ transform: scale(1.1) translate(-2%, -2%); }} }}</style>
+        """
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
