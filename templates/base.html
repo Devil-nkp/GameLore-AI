@@ -3,58 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameLore AI - Precision Engine</title>
+    <title>GameLore Supreme</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <style>
-        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        [x-cloak] { display: none !important; }
-        .glow-text { text-shadow: 0 0 15px rgba(168, 85, 247, 0.5); }
-        /* Prevent title cutoff on small screens */
-        .brand-title { font-size: clamp(1.25rem, 4vw, 1.875rem); white-space: nowrap; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-text { text-shadow: 0 0 30px rgba(168, 85, 247, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .htmx-indicator{ display:none; }
+        .htmx-request .htmx-indicator{ display:inline; }
+        .htmx-request #vid-text { display: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen" 
-      x-data="{ modalOpen: false, modalSrc: '', modalType: 'image' }">
-    
-    <nav class="border-b border-slate-700 p-4 flex justify-between items-center glass sticky top-0 z-50">
-        <a href="/" class="brand-title font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text hover:opacity-80 transition">
-            GameLore.AI
+<body class="bg-[#0f111a] text-slate-100 font-sans antialiased min-h-screen">
+    <nav class="border-b border-white/5 p-4 flex justify-between items-center glass sticky top-0 z-50">
+        <a href="/" class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text">
+            GL.AI
         </a>
-        <div class="flex gap-3 md:gap-4 items-center">
+        <div class="flex gap-4 items-center">
             {% if current_user.is_authenticated %}
-                <span class="text-xs md:text-sm text-purple-300 hidden md:block border border-purple-500/30 px-2 py-1 rounded">XP: {{ current_user.xp }}</span>
-                <a href="/dashboard" class="hover:text-white font-semibold text-sm md:text-base">Hub</a>
-                <a href="/generate" class="bg-purple-600 hover:bg-purple-700 px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-bold shadow-lg text-sm md:text-base">Create</a>
-                <a href="/logout" class="text-slate-400 hover:text-red-400 px-2 text-sm md:text-base">Exit</a>
+                <div class="hidden md:flex flex-col items-end text-xs mr-2">
+                    <span class="text-purple-400 font-bold">{{ user.name }}</span>
+                    <span class="text-slate-500">{{ user.credits }} Credits</span>
+                </div>
+                <a href="/dashboard" class="hover:text-white transition text-sm">Hub</a>
+                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm shadow-[0_0_15px_rgba(147,51,234,0.4)]">Create</a>
+                <a href="/logout" class="text-slate-500 hover:text-red-400 text-sm">Exit</a>
             {% else %}
                 <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm">Login</a>
             {% endif %}
         </div>
     </nav>
-
-    <div x-show="modalOpen" x-transition.opacity 
-         class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4" x-cloak
-         @keydown.escape.window="modalOpen = false">
-        
-        <button @click="modalOpen = false; modalSrc = ''" 
-                class="absolute top-4 right-4 text-white/50 hover:text-white text-4xl font-bold p-4 z-50 cursor-pointer">
-            &times;
-        </button>
-        
-        <div class="relative max-w-7xl w-full flex justify-center">
-            <template x-if="modalType === 'image'">
-                <img :src="modalSrc" class="max-h-[90vh] max-w-full rounded shadow-2xl border border-slate-700 object-contain">
-            </template>
-            
-            <template x-if="modalType === 'video'">
-                <video :src="modalSrc" controls autoplay loop class="max-h-[90vh] max-w-full rounded shadow-2xl border border-slate-700"></video>
-            </template>
-        </div>
-    </div>
-
-    <main class="container mx-auto p-4 md:p-6">
+    <main class="container mx-auto p-4 md:p-8">
         {% block content %}{% endblock %}
     </main>
 </body>
