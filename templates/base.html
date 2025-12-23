@@ -17,11 +17,12 @@
         <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
             GameLore.AI
         </a>
-        <div class="flex gap-4">
+        <div class="flex gap-4 items-center">
             {% if current_user.is_authenticated %}
-                <span class="text-sm text-purple-300 self-center">XP: {{ current_user.xp }}</span>
-                <a href="/dashboard" class="hover:text-white transition">Hub</a>
-                <a href="/generate" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition">Create</a>
+                <span class="text-sm text-purple-300 hidden md:block">XP: {{ current_user.xp }}</span>
+                <a href="/dashboard" class="hover:text-white transition">Dashboard</a>
+                <a href="/generate" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition text-sm">Create</a>
+                <a href="/logout" class="text-slate-400 hover:text-red-400 text-sm border border-slate-700 px-3 py-2 rounded transition">Logout</a>
             {% else %}
                 <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 transition">Login with Google</a>
             {% endif %}
