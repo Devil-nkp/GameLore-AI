@@ -1,32 +1,30 @@
-<div class="animate-fade-in-up grid md:grid-cols-3 gap-6">
-    
-    <div class="md:col-span-1">
-        <div class="glass p-2 rounded-xl relative group">
-            <img src="{{ gen.image_url }}" alt="Generated Asset" class="w-full h-auto rounded-lg shadow-lg border border-slate-700">
-            <div class="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
-                AI Generated
-            </div>
+<div class="animate-fade-in-up grid md:grid-cols-3 gap-6 h-full">
+    <div class="md:col-span-1 flex flex-col">
+        <div class="glass p-2 rounded-xl relative group mb-3">
+            <img src="{{ gen.image_url }}" alt="Generated Asset" class="w-full h-48 object-cover rounded-lg shadow-lg border border-slate-700 bg-black">
+            <div class="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">AI Art</div>
         </div>
         
-        <div class="flex gap-2 mt-4 justify-center">
-             <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="flex items-center gap-1 bg-slate-800 hover:bg-pink-900/50 px-3 py-1 rounded-full transition text-pink-400 border border-pink-500/30">
+        <div class="flex gap-2 justify-center">
+             <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="flex items-center gap-1 bg-slate-800 hover:bg-pink-900/50 px-3 py-1 rounded-full transition text-pink-400 border border-pink-500/30 text-sm font-bold">
                 ❤️ {{ gen.likes }}
             </button>
-            <a href="{{ gen.image_url }}" download target="_blank" class="bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-full text-xs text-blue-400 border border-blue-500/30">
+            <a href="{{ gen.image_url }}" download target="_blank" class="bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-full text-xs text-blue-400 border border-blue-500/30 flex items-center">
                 ⬇️ Img
             </a>
         </div>
     </div>
 
-    <div class="md:col-span-2">
-        <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+    <div class="md:col-span-2 flex flex-col h-full">
+        <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
             <span class="text-xs font-bold text-pink-400 uppercase tracking-widest">{{ gen.type }}</span>
             <div class="flex gap-2">
-                <a href="/export/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">JSON Export</a>
+                <a href="/export/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">JSON</a>
+                <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-white transition">Share</button>
             </div>
         </div>
         
-        <div class="prose prose-invert max-w-none text-sm text-slate-300 h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+        <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1 max-h-[400px]">
             {{ gen.content | safe }}
         </div>
     </div>
