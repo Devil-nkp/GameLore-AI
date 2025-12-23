@@ -1,31 +1,33 @@
-<div class="animate-fade-in-up grid md:grid-cols-3 gap-6 h-full">
-    <div class="md:col-span-1 flex flex-col">
-        <div class="glass p-2 rounded-xl relative group mb-3">
-            <img src="{{ gen.image_url }}" alt="Generated Asset" class="w-full h-48 object-cover rounded-lg shadow-lg border border-slate-700 bg-black">
-            <div class="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">AI Art</div>
-        </div>
-        
-        <div class="flex gap-2 justify-center">
-             <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="flex items-center gap-1 bg-slate-800 hover:bg-pink-900/50 px-3 py-1 rounded-full transition text-pink-400 border border-pink-500/30 text-sm font-bold">
-                ❤️ {{ gen.likes }}
-            </button>
-            <a href="{{ gen.image_url }}" download target="_blank" class="bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded-full text-xs text-blue-400 border border-blue-500/30 flex items-center">
-                ⬇️ Img
+<div class="animate-fade-in-up h-full flex flex-col">
+    <div class="grid grid-cols-2 gap-2 mb-4">
+        {% for img in gen.image_list %}
+        <div class="relative group aspect-square">
+            <img src="{{ img }}" class="w-full h-full object-cover rounded-lg border border-slate-700 bg-black">
+            <a href="{{ img }}" download target="_blank" class="absolute bottom-1 right-1 bg-black/70 p-1 rounded hover:bg-purple-600 transition text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             </a>
         </div>
+        {% endfor %}
     </div>
 
-    <div class="md:col-span-2 flex flex-col h-full">
-        <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
-            <span class="text-xs font-bold text-pink-400 uppercase tracking-widest">{{ gen.type }}</span>
-            <div class="flex gap-2">
-                <a href="/export/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">JSON</a>
-                <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-white transition">Share</button>
-            </div>
+    <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+        <div class="flex gap-2">
+            <button hx-post="/like/{{ gen.id }}" hx-swap="outerHTML" class="text-pink-400 font-bold text-sm bg-slate-800 px-3 py-1 rounded-full border border-pink-500/30">
+                ❤️ {{ gen.likes }}
+            </button>
         </div>
-        
-        <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1 max-h-[400px]">
-            {{ gen.content | safe }}
+        <div class="flex gap-2">
+            <a href="/download_text/{{ gen.id }}" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition flex items-center gap-1">
+                📄 Text
+            </a>
+            <a href="/download_json/{{ gen.id }}" class="text-xs bg-indigo-900 hover:bg-indigo-800 px-2 py-1 rounded text-white transition flex items-center gap-1">
+                ⚙️ JSON
+            </a>
+            <button hx-post="/share_discord/{{ gen.id }}" hx-swap="outerHTML" class="text-xs bg-purple-600 hover:bg-purple-500 px-2 py-1 rounded text-white transition">Share</button>
         </div>
+    </div>
+    
+    <div class="prose prose-invert max-w-none text-sm text-slate-300 overflow-y-auto pr-2 custom-scrollbar flex-1">
+        {{ gen.content | safe }}
     </div>
 </div>
