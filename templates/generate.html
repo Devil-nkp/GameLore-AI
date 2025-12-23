@@ -1,54 +1,58 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-6xl mx-auto" x-data="{ loading: false }">
+<div class="max-w-6xl mx-auto" x-data="{ loading: false, progress: 0 }">
     <div class="text-center mb-8">
-        <h1 class="text-4xl md:text-5xl font-extrabold mb-2 glow-text text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-            Supreme Engine
+        <h1 class="text-3xl md:text-5xl font-extrabold mb-2 glow-text text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+            Precision Engine
         </h1>
-        <p class="text-slate-400">Instant Clean Text + Video + 3 Images.</p>
+        <p class="text-slate-400 text-sm md:text-base">Accurate Assets. Ambient Video. Instant Lore.</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="glass p-6 rounded-xl shadow-2xl h-fit">
             <form hx-post="/generate" 
                   hx-target="#result-area" 
-                  @submit="loading = true" 
-                  hx-on::after-request="loading = false">
+                  @submit="loading = true; progress = 10; let timer = setInterval(() => { if(progress < 90) progress += 5; else clearInterval(timer); }, 200)" 
+                  hx-on::after-request="loading = false; progress = 100">
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Type</label>
+                    <label class="block text-sm font-bold mb-2 text-purple-300">Asset Type</label>
                     <select name="type" class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white">
-                        <option value="NPC">NPC Character</option>
-                        <option value="Quest">Side Quest</option>
-                        <option value="Item">Weapon</option>
-                        <option value="Location">Environment</option>
+                        <option value="Weapon">Weapon / Item</option>
+                        <option value="NPC">Character (NPC)</option>
+                        <option value="Location">Location / Environment</option>
+                        <option value="Quest">Story / Quest</option>
                     </select>
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-bold mb-2 text-purple-300">Genre</label>
-                    <input type="text" name="genre" placeholder="e.g. Cyberpunk" class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white">
+                    <input type="text" name="genre" placeholder="e.g. Cyberpunk, Medieval, Sci-Fi" class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white">
                 </div>
                 <div class="mb-6">
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Details</label>
-                    <textarea name="details" rows="3" placeholder="Description..." class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white"></textarea>
+                    <label class="block text-sm font-bold mb-2 text-purple-300">Specific Details</label>
+                    <textarea name="details" rows="3" placeholder="Describe the item or character..." class="w-full bg-slate-800 border border-slate-600 rounded p-3 text-white"></textarea>
                 </div>
 
                 <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-lg font-bold text-lg hover:scale-105 transition text-white" :disabled="loading">
-                    <span x-show="!loading">🚀 Launch Generation</span>
-                    <span x-show="loading">Processing...</span>
+                    <span x-show="!loading">🚀 Generate Assets</span>
+                    <span x-show="loading" x-text="'Processing... ' + progress + '%'"></span>
                 </button>
+                
+                <div x-show="loading" class="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
+                    <div class="bg-purple-500 h-full transition-all duration-300 ease-out" :style="'width: ' + progress + '%'"></div>
+                </div>
             </form>
         </div>
 
         <div class="glass p-6 rounded-xl flex flex-col min-h-[500px] relative overflow-hidden bg-slate-800/30">
-            <div x-show="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 z-20">
+            <div x-show="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 z-20 transition">
                 <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p class="text-purple-300 animate-pulse font-bold">Forging Assets...</p>
+                <p class="text-purple-300 font-bold animate-pulse">Constructing 3D Renders & Lore...</p>
             </div>
             <div id="result-area" class="w-full h-full">
                 <div class="flex flex-col items-center justify-center h-full text-slate-500">
-                    <div class="text-6xl mb-4 opacity-30">⚡</div>
-                    <p>Awaiting Input.</p>
+                    <div class="text-6xl mb-4 opacity-30">🎯</div>
+                    <p>Accurate results will appear here.</p>
                 </div>
             </div>
         </div>
