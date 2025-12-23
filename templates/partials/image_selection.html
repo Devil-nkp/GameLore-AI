@@ -1,20 +1,27 @@
-<div class="animate-fade-in-up">
+<div class="animate-fade-in-up w-full">
     <div class="text-center mb-6">
-        <h2 class="text-2xl font-bold text-white">Select the Best Concept</h2>
-        <p class="text-slate-400 text-sm">Click an image to generate Deep Lore & Video for it.</p>
+        <h2 class="text-xl md:text-2xl font-bold text-white">Select the Best Concept</h2>
+        <p class="text-slate-400 text-xs md:text-sm">Click an image to generate Deep Lore & Video for it.</p>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         {% for img in images %}
-        <form hx-post="/finalize_creation" hx-target="#output-stage" class="group cursor-pointer">
+        <form hx-post="/finalize_creation" hx-target="#output-stage" class="group cursor-pointer relative aspect-square">
             <input type="hidden" name="selected_image" value="{{ img }}">
             <input type="hidden" name="type" value="{{ c_type }}">
             <input type="hidden" name="genre" value="{{ c_genre }}">
             <input type="hidden" name="details" value="{{ c_details }}">
             <input type="hidden" name="prompt_base" value="{{ prompt_base }}">
-            <button type="submit" class="relative w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-700 hover:border-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] transition duration-300">
-                <img src="{{ img }}" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                    <span class="bg-purple-600 text-white px-4 py-2 rounded-full font-bold shadow-lg transform scale-90 group-hover:scale-100 transition">Select</span>
+
+            <button type="submit" class="w-full h-full rounded-xl overflow-hidden border-2 border-slate-800 hover:border-purple-500 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition duration-200 bg-black relative">
+                <img src="{{ img }}" 
+                     class="w-full h-full object-cover" 
+                     loading="eager" 
+                     onerror="this.src='https://placehold.co/1024x1024/1e293b/FFF?text=Generation+Failed';">
+                
+                <div class="absolute inset-0 bg-purple-900/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition duration-200">
+                    <span class="text-3xl mb-2">✨</span>
+                    <span class="text-white font-bold text-sm uppercase tracking-widest">Analyze</span>
                 </div>
             </button>
         </form>
