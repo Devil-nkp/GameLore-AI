@@ -1,32 +1,22 @@
 <div class="animate-fade-in-up grid md:grid-cols-2 gap-8 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-    
     <div>
         <div id="video-container" class="w-full aspect-square rounded-xl overflow-hidden border border-slate-600 bg-black relative">
-            <img src="{{ gen.selected_image }}" class="w-full h-full object-cover">
+            <img src="{{ gen.selected_image }}" class="w-full h-full object-cover cursor-pointer" @click="modalOpen = true; modalSrc = '{{ gen.selected_image }}'">
         </div>
-        
         <div class="mt-4 flex gap-2">
-            <button hx-post="/create_video/{{ gen.id }}" 
-                    hx-target="#video-container" 
-                    hx-indicator="#vid-load"
+            <button hx-post="/create_video/{{ gen.id }}" hx-target="#video-container" hx-indicator="#vid-load"
                     class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white py-3 rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2">
                 <span id="vid-text">🎥 Create Video</span>
                 <img id="vid-load" src="https://cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif" class="h-4 w-4 htmx-indicator filter invert">
             </button>
-            
             <a href="{{ gen.selected_image }}" download target="_blank" class="px-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-bold">⬇️</a>
         </div>
     </div>
-
     <div class="flex flex-col h-full">
         <div class="mb-4 pb-4 border-b border-slate-700">
-            <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                {{ gen.type }} Analysis
-            </h3>
-            <p class="text-xs text-slate-400 mt-1">Generated via Llama 3.1 & Flux</p>
+            <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{{ gen.type }} Analysis</h3>
         </div>
-        
-        <div class="prose prose-invert prose-sm overflow-y-auto custom-scrollbar flex-1 text-slate-300 leading-relaxed whitespace-pre-line">
+        <div class="prose prose-invert prose-sm overflow-y-auto custom-scrollbar flex-1 text-slate-300 leading-relaxed whitespace-pre-line max-h-[400px]">
             {{ gen.content }}
         </div>
     </div>
