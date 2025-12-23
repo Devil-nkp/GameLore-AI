@@ -2,15 +2,15 @@
 {% block content %}
 <div class="max-w-6xl mx-auto" x-data="{ 
     loading: false, 
-    stage: '', 
+    stage: 'Initializing...', 
     progress: 0,
     startLoading() {
         this.loading = true;
         this.progress = 5;
         this.stage = 'Initializing Neural Network...';
-        setTimeout(() => { this.progress = 30; this.stage = 'Architecting Geometry...'; }, 800);
-        setTimeout(() => { this.progress = 60; this.stage = 'Rendering Textures...'; }, 2000);
-        setTimeout(() => { this.progress = 90; this.stage = 'Finalizing Visuals...'; }, 3500);
+        setTimeout(() => { if(this.loading) { this.progress = 40; this.stage = 'Architecting Geometry...'; } }, 1000);
+        setTimeout(() => { if(this.loading) { this.progress = 70; this.stage = 'Rendering Textures...'; } }, 2500);
+        setTimeout(() => { if(this.loading) { this.progress = 90; this.stage = 'Finalizing Visuals...'; } }, 4500);
     }
 }">
     <div class="text-center mb-8">
@@ -47,7 +47,7 @@
     </div>
 
     <div id="output-stage" class="mt-12 min-h-[400px]">
-        <div x-show="loading" class="flex flex-col items-center justify-center pt-10">
+        <div x-show="loading" class="flex flex-col items-center justify-center pt-10" x-cloak>
             <div class="w-full max-w-md bg-slate-800 h-2 rounded-full overflow-hidden mb-4">
                 <div class="bg-purple-500 h-full transition-all duration-700 ease-out" :style="'width: ' + progress + '%'"></div>
             </div>
