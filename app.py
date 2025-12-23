@@ -7,18 +7,17 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from sqlalchemy.sql import func
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
 import io
 
-# Load .env variables (for local testing)
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "super_secret_key")
 
-# --- Database Config (Fix for Render) ---
-# Use Render's Postgres URL if available, otherwise fallback to local SQLite
+# --- Database Config ---
 db_url = os.getenv("DATABASE_URL", "sqlite:///supreme_lore.db")
 if db_url.startswith("postgres://"): 
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -30,12 +29,11 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'home'
 
-# --- 3rd Party Integrations ---
+# --- Integrations ---
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL") 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# --- OAuth Setup ---
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
@@ -49,12 +47,12 @@ google = oauth.register(
     client_kwargs={'scope': 'email profile'},
 )
 
-# --- Database Models ---
+# --- Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True)
     name = db.Column(db.String(100))
-    credits = db.Column(db.Integer, default=3) # Start with 3 free credits
+    credits = db.Column(db.Integer, default=3)
     xp = db.Column(db.Integer, default=0) 
     is_pro = db.Column(db.Boolean, default=False)
     badges = db.Column(db.Text, default="[]") 
@@ -64,36 +62,17 @@ class Generation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     type = db.Column(db.String(50))
     content = db.Column(db.Text)
+    likes = db.Column(db.Integer, default=0)  # <--- NEW COLUMN
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- CRITICAL FIX: Create Tables on Startup ---
-# This ensures tables exist even when running on Render/Gunicorn
 with app.app_context():
     db.create_all()
 
 # --- Helper Logic ---
-def award_xp(user, amount):
-    user.xp += amount
-    badges = json.loads(user.badges)
-    
-    # Simple Badge Logic
-    new_badge = None
-    if user.xp >= 50 and "Scribe" not in badges:
-        new_badge = "Scribe"
-    elif user.xp >= 200 and "World Builder" not in badges:
-        new_badge = "World Builder"
-        
-    if new_badge:
-        badges.append(new_badge)
-        user.badges = json.dumps(badges)
-        flash(f"🏆 Level Up! You earned the '{new_badge}' Badge!", "success")
-    
-    db.session.commit()
-
 def call_groq_api(content_type, genre, details):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
@@ -112,13 +91,25 @@ def call_groq_api(content_type, genre, details):
         print(f"Groq Error: {e}")
     return "AI Generation failed. Please try again."
 
+def award_xp(user, amount):
+    user.xp += amount
+    badges = json.loads(user.badges)
+    if user.xp >= 50 and "Scribe" not in badges:
+        badges.append("Scribe")
+        flash("🏆 Earned Badge: Scribe!", "success")
+    user.badges = json.dumps(badges)
+    db.session.commit()
+
 # --- Routes ---
 
 @app.route('/')
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('home.html')
+    
+    # Calculate Global Likes for the "Special Line"
+    total_likes = db.session.query(func.sum(Generation.likes)).scalar() or 0
+    return render_template('home.html', total_likes=total_likes)
 
 @app.route('/login/google')
 def google_login():
@@ -140,11 +131,18 @@ def google_auth():
     login_user(user)
     return redirect(url_for('dashboard'))
 
+@app.route('/logout')  # <--- NEW LOGOUT ROUTE
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     badges = json.loads(current_user.badges)
-    recent_gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).limit(5).all()
+    # Fetch user history
+    recent_gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
     return render_template('dashboard.html', user=current_user, badges=badges, recent_gens=recent_gens)
 
 @app.route('/generate', methods=['GET', 'POST'])
@@ -153,56 +151,56 @@ def generate():
     if request.method == 'GET':
         return render_template('generate.html')
     
-    # Check Credits
     if not current_user.is_pro and current_user.credits < 1:
-        return "<div class='text-red-400 p-4 border border-red-600 rounded bg-red-900/20'>❌ Out of credits. Please upgrade in Dashboard.</div>"
+        return "<div class='text-red-400'>❌ Out of credits.</div>"
 
     data = request.form
     result_text = call_groq_api(data.get('type'), data.get('genre'), data.get('details'))
     
-    # Deduct Credit & Award XP
     if not current_user.is_pro:
         current_user.credits -= 1
     award_xp(current_user, 10)
     
-    # Save Generation
     gen = Generation(user_id=current_user.id, type=data.get('type'), content=result_text)
     db.session.add(gen)
     db.session.commit()
     
     return render_template('partials/result_card.html', gen=gen)
 
+@app.route('/like/<int:gen_id>', methods=['POST']) # <--- NEW LIKE ROUTE
+@login_required
+def like_content(gen_id):
+    gen = Generation.query.get_or_404(gen_id)
+    gen.likes += 1
+    db.session.commit()
+    # Return just the button part (HTMX swap)
+    return f"""
+    <button class="flex items-center gap-1 text-pink-500 font-bold" disabled>
+        ❤️ {gen.likes}
+    </button>
+    """
+
 @app.route('/export/<int:gen_id>')
 @login_required
 def export_unity(gen_id):
     gen = Generation.query.get_or_404(gen_id)
     if gen.user_id != current_user.id: return "Unauthorized", 403
-    
     unity_data = {"id": gen.id, "type": gen.type, "content": gen.content}
-    return send_file(
-        io.BytesIO(json.dumps(unity_data, indent=4).encode()),
-        mimetype='application/json',
-        as_attachment=True,
-        download_name=f"gamelore_{gen.id}.json"
-    )
+    return send_file(io.BytesIO(json.dumps(unity_data, indent=4).encode()), mimetype='application/json', as_attachment=True, download_name=f"gamelore_{gen.id}.json")
 
 @app.route('/share_discord/<int:gen_id>', methods=['POST'])
 @login_required
 def share_discord(gen_id):
     gen = Generation.query.get_or_404(gen_id)
     if DISCORD_WEBHOOK_URL:
-        payload = {"content": f"🚀 **New Creation by {current_user.name}**\nType: {gen.type}\nCheck it out on GameLore AI!"}
-        requests.post(DISCORD_WEBHOOK_URL, json=payload)
-        return "<span class='text-green-400 text-sm font-bold'>Shared to Discord!</span>"
-    return "<span class='text-red-400 text-sm'>Discord not configured.</span>"
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": f"🚀 **New Creation**\nType: {gen.type}\nLikes: {gen.likes}"})
+        return "<span class='text-green-400'>Shared!</span>"
+    return "<span class='text-red-400'>Discord Error</span>"
 
 @app.route('/payment')
-@login_required
 def payment():
-    # Placeholder for Payment Page
-    return render_template('payment.html', key=os.getenv("STRIPE_PUBLISHABLE_KEY"))
+    return render_template('payment.html')
 
-# --- Run Server ---
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 
