@@ -13,28 +13,34 @@
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        
+        /* THE GLOW EFFECT */
+        .glow-text {
+            text-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(236, 72, 153, 0.4);
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen">
     <nav class="border-b border-slate-700 p-4 flex justify-between items-center glass sticky top-0 z-50">
-        <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 hover:scale-105 transition">
+        <a href="/" class="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text hover:scale-105 transition duration-300">
             GameLore.AI
         </a>
+        
         <div class="flex gap-4 items-center">
-            <a href="/about" class="text-slate-400 hover:text-white transition text-sm">About</a>
+            <a href="/about" class="text-slate-400 hover:text-white transition text-sm hidden md:block">About</a>
             
             {% if current_user.is_authenticated %}
                 <span class="text-sm text-purple-300 hidden md:block border border-purple-500/30 px-2 py-1 rounded">XP: {{ current_user.xp }}</span>
-                <a href="/dashboard" class="hover:text-white transition text-sm font-semibold">Dashboard</a>
+                <a href="/dashboard" class="hover:text-white transition text-sm font-semibold">Hub</a>
                 <a href="/generate" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold transition text-sm shadow-lg shadow-purple-900/50">Create</a>
-                <a href="/logout" class="text-slate-400 hover:text-red-400 text-sm border border-slate-700 px-3 py-2 rounded transition">Logout</a>
+                <a href="/logout" class="text-slate-400 hover:text-red-400 text-sm border border-slate-700 px-3 py-2 rounded transition">Exit</a>
             {% else %}
-                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">Login with Google</a>
+                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 transition text-sm">Login</a>
             {% endif %}
         </div>
     </nav>
 
-    <main class="container mx-auto p-6">
+    <main class="container mx-auto p-4 md:p-6">
         {% block content %}{% endblock %}
     </main>
 </body>
