@@ -31,7 +31,7 @@ login_manager.login_view = 'home'
 
 # --- Keys ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") 
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # Optional: For AI Video
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True)
     name = db.Column(db.String(100))
-    credits = db.Column(db.Integer, default=15)
+    credits = db.Column(db.Integer, default=15) # Generous start
     xp = db.Column(db.Integer, default=0) 
     is_pro = db.Column(db.Boolean, default=False)
 
@@ -76,20 +76,18 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# --- Logic: Prompt Architect (Fixed Accuracy) ---
+# --- Logic: Prompt Architect ---
 def construct_precision_prompt(content_type, genre, details):
-    """Enforces strict visual rules."""
+    """Enforces strict visual rules based on asset type."""
     base = f"{genre} style, {details}"
-    
-    # We prepend specific "Negative Prompts" naturally by describing what IS there.
     if content_type == "Weapon":
-        return f"detailed 3d render of a single isolated weapon, {base}, plain background, studio lighting, unreal engine 5, centered, high quality, NO HUMANS, NO HANDS, NO CHARACTERS"
+        return f"isolated single weapon asset, {base}, 3d render, blender style, plain white background, high detail, no characters, no hands"
     elif content_type == "Item":
-        return f"detailed 3d render of a single game item icon, {base}, magical glow, plain dark background, centric composition, digital art, NO TEXT, NO UI"
+        return f"isolated game item icon, {base}, digital painting, magical glow, plain background, centric composition, no text"
     elif content_type == "NPC":
-        return f"detailed character portrait, {base}, looking at camera, highly detailed face, upper body shot, rpg style, dynamic lighting, masterpiece"
+        return f"character concept art, portrait of {base}, looking at camera, detailed face, upper body, rpg style, dynamic lighting"
     elif content_type == "Location":
-        return f"wide cinematic shot of a location, {base}, environmental concept art, atmospheric, detailed scenery, 8k resolution, no text"
+        return f"wide shot, environmental concept art, {base}, atmospheric, cinematic lighting, unreal engine 5, 8k"
     return base
 
 def clean_text(text):
@@ -98,16 +96,14 @@ def clean_text(text):
     text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
     return text.strip()
 
-# --- Logic: Generators (Fixed Broken Images) ---
+# --- Logic: Generators ---
 def generate_images_pollinations(prompt, count=4):
     images = []
-    # Using 'flux' model which is more reliable than default
-    # Adding 'enhance=false' so it doesn't mess up our strict prompt
+    encoded = quote(prompt)
     for i in range(count):
         seed = random.randint(1, 99999)
-        # Clean the prompt for URL safety
-        safe_prompt = quote(prompt)
-        url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=1024&seed={seed}&nologo=true&model=flux&enhance=false"
+        # Using 'Flux-Realism' for higher quality
+        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&seed={seed}&nologo=true&model=Flux-Realism"
         images.append(url)
     return images
 
@@ -125,22 +121,38 @@ def generate_lore_groq(content_type, genre, details):
     return "Error"
 
 def generate_video_replicate(image_url):
-    if not REPLICATE_API_TOKEN: return None
+    """
+    Real AI Video Generation using Stability AI via Replicate.
+    If no key is provided, returns None (Frontend handles fallback).
+    """
+    if not REPLICATE_API_TOKEN:
+        return None
+    
     headers = {"Authorization": f"Token {REPLICATE_API_TOKEN}", "Content-Type": "application/json"}
+    
+    # Start Prediction
     data = {
-        "version": "1446844794ad193ee054152331572c638202521c402120b08064402633000570",
+        "version": "1446844794ad193ee054152331572c638202521c402120b08064402633000570", # SVD 1.1
         "input": {"input_image": image_url, "video_length": "14_frames_with_svd_xt", "frames_per_second": 6}
     }
+    
     try:
         req = requests.post("https://api.replicate.com/v1/predictions", json=data, headers=headers)
         if req.status_code != 201: return None
-        get_url = req.json()['urls']['get']
-        for _ in range(15): 
+        
+        prediction = req.json()
+        get_url = prediction['urls']['get']
+        
+        # Poll for result (Simple polling for demo)
+        for _ in range(20): # Wait up to 20 seconds (usually takes more, but this is a demo)
             time.sleep(2)
             check = requests.get(get_url, headers=headers).json()
-            if check['status'] == 'succeeded': return check['output']
-            if check['status'] == 'failed': return None
-    except: return None
+            if check['status'] == 'succeeded':
+                return check['output']
+            if check['status'] == 'failed':
+                return None
+    except:
+        return None
     return None
 
 # --- Routes ---
@@ -181,6 +193,7 @@ def dashboard():
     gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
     return render_template('dashboard.html', user=current_user, gens=gens)
 
+# PHASE 1: Visuals
 @app.route('/generate_visuals', methods=['GET', 'POST'])
 @login_required
 def generate_visuals():
@@ -192,6 +205,7 @@ def generate_visuals():
                            images=image_urls, prompt_base=precise_prompt,
                            c_type=data.get('type'), c_genre=data.get('genre'), c_details=data.get('details'))
 
+# PHASE 2: Finalize
 @app.route('/finalize_creation', methods=['POST'])
 @login_required
 def finalize_creation():
@@ -206,17 +220,26 @@ def finalize_creation():
     db.session.commit()
     return render_template('partials/final_result.html', gen=gen)
 
+# PHASE 3: Video
 @app.route('/create_video/<int:gen_id>', methods=['POST'])
 @login_required
 def create_video(gen_id):
     gen = Generation.query.get_or_404(gen_id)
     video_url = generate_video_replicate(gen.selected_image)
+    
     if video_url:
         gen.video_url = video_url
         db.session.commit()
         return f"""<video src="{video_url}" controls autoplay loop class="w-full rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]"></video>"""
     else:
-        return f"""<div class="relative w-full aspect-square overflow-hidden rounded-lg border border-purple-500"><img src="{gen.selected_image}" class="w-full h-full object-cover animate-ken-burns"><div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Simulated Motion</div></div><style>.animate-ken-burns {{ animation: ken-burns 15s ease-in-out infinite alternate; }} @keyframes ken-burns {{ 0% {{ transform: scale(1); }} 100% {{ transform: scale(1.1) translate(-2%, -2%); }} }}</style>"""
+        # Fallback Ken Burns Effect
+        return f"""
+        <div class="relative w-full aspect-square overflow-hidden rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+            <img src="{gen.selected_image}" class="w-full h-full object-cover animate-ken-burns">
+            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Simulated Motion</div>
+        </div>
+        <style>.animate-ken-burns {{ animation: ken-burns 15s ease-in-out infinite alternate; }} @keyframes ken-burns {{ 0% {{ transform: scale(1); }} 100% {{ transform: scale(1.1) translate(-2%, -2%); }} }}</style>
+        """
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
