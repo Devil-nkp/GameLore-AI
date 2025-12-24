@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block content %}
+<nav class="glass border-b border-cyan-900 p-4 sticky top-0 z-40 flex justify-between items-center">
+    <div class="text-cyan-400 font-bold tracking-widest"><i class="fa-solid fa-network-wired"></i> OMNI.GEN // HUB</div>
+    <div class="text-xs text-cyan-600">UNIT: {{ user.name }} // CREDITS: ∞</div>
+</nav>
+
+<div class="container mx-auto p-4 space-y-8 pb-20">
+
+    <section class="glass sci-fi-border rounded-xl p-6 relative">
+        <div class="absolute top-0 left-0 bg-cyan-500 text-black text-xs font-bold px-2 py-1">SECTOR: OMNI_IMG</div>
+        <h2 class="text-2xl font-bold text-white mb-4 mt-2">Multi-Engine Visual Synthesis</h2>
+        
+        <div class="flex gap-4 mb-6">
+            <input type="text" id="masterPrompt" class="flex-1 bg-black/50 border border-cyan-800 rounded p-4 text-cyan-100 focus:border-cyan-400 outline-none font-mono" placeholder="Enter master prompt for all engines...">
+            <button onclick="igniteAllEngines()" class="btn-sci px-8 rounded font-bold flex items-center gap-2">
+                <i class="fa-solid fa-burst"></i> IGNITE ALL ENGINES
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="sci-fi-border rounded-lg p-4 bg-black/40 flex flex-col">
+                <h3 class="text-cyan-300 font-bold mb-2 text-sm"><i class="fa-solid fa-microchip"></i> ENGINE A: PUTER.JS (Local Flux)</h3>
+                <div id="puterSlot" class="flex-1 min-h-[250px] bg-slate-900 rounded flex items-center justify-center relative group border border-cyan-900/50">
+                    <span class="text-cyan-700 text-xs">STANDBY</span>
+                </div>
+            </div>
+            <div class="sci-fi-border rounded-lg p-4 bg-black/40 flex flex-col">
+                <h3 class="text-pink-300 font-bold mb-2 text-sm"><i class="fa-solid fa-server"></i> ENGINE B: RAPHAEL REST API</h3>
+                <div id="raphaelSlot" class="flex-1 min-h-[250px] bg-slate-900 rounded flex items-center justify-center relative group border border-pink-900/50">
+                    <span class="text-pink-700 text-xs">STANDBY</span>
+                </div>
+            </div>
+             <div class="sci-fi-border rounded-lg p-4 bg-black/40 flex flex-col">
+                <h3 class="text-yellow-300 font-bold mb-2 text-sm"><i class="fa-solid fa-users-rays"></i> ENGINE C: AI HORDE (Async Swarm)</h3>
+                <div id="hordeImgSlot" class="flex-1 min-h-[250px] bg-slate-900 rounded flex items-center justify-center relative group border border-yellow-900/50">
+                    <span class="text-yellow-700 text-xs">STANDBY</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="glass sci-fi-border rounded-xl p-6 relative">
+        <div class="absolute top-0 left-0 bg-purple-500 text-black text-xs font-bold px-2 py-1">SECTOR: CHRONO_VID</div>
+        <h2 class="text-2xl font-bold text-white mb-4 mt-2">Multi-Engine Temporal Synthesis</h2>
+        <p class="text-purple-300 text-sm mb-4">Select a generated image above to initialize video engines.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div class="sci-fi-border rounded-lg p-4 bg-black/40 flex flex-col">
+                <h3 class="text-purple-300 font-bold mb-2 text-sm"><i class="fa-solid fa-bolt"></i> ENGINE V1: A2E RAPID VIDEO</h3>
+                <div id="a2eSlot" class="flex-1 min-h-[200px] bg-slate-900 rounded flex items-center justify-center relative border border-purple-900/50">
+                    <span class="text-purple-700 text-xs">AWAITING IMAGE SOURCE</span>
+                </div>
+            </div>
+            <div class="sci-fi-border rounded-lg p-4 bg-black/40 flex flex-col opacity-50">
+                <h3 class="text-gray-400 font-bold mb-2 text-sm"><i class="fa-solid fa-hourglass"></i> ENGINE V2: HORDE VIDEO (ASYNC)</h3>
+                <div class="flex-1 min-h-[200px] bg-slate-900 rounded flex items-center justify-center border border-gray-700">
+                     <span class="text-gray-600 text-center text-xs p-4">Integration Pending (Requires complex async polling UI. Focus on A2E for speed).</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+     <section>
+        <h3 class="text-cyan-500 border-b border-cyan-900 pb-2 mb-4 font-bold tracking-widest">GENERATION ARCHIVE</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {% for item in history %}
+            <a href="/history/{{ item.id }}" class="block sci-fi-border rounded-lg overflow-hidden hover:scale-105 transition relative group aspect-square bg-black">
+                <img src="{{ item.main_image_url }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+
+<script>
+    let currentPrompt = "";
+    let selectedImageUrl = "";
+
+    // --- Helper: Loading Spinner State ---
+    function setLoading(slotId, color) {
+        document.getElementById(slotId).innerHTML = `<div class="loader ease-linear rounded-full border-4 border-t-4 border-${color}-900 h-8 w-8"></div>`;
+    }
+
+    // --- Helper: Render Result Image ---
+    function renderImage(slotId, url, engineName, color) {
+        const slot = document.getElementById(slotId);
+        slot.innerHTML = `
+            <img src="${url}" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                <button onclick="openFullscreen('${url}', 'img')" class="text-${color}-400 hover:text-white"><i class="fa-solid fa-expand fa-xl"></i></button>
+                <button onclick="selectForVideo('${url}')" class="btn-sci text-xs px-4 py-2 rounded mt-2 border-${color}-500 text-${color}-300 hover:bg-${color}-500 hover:text-white">
+                    <i class="fa-solid fa-film"></i> SELECT FOR VIDEO
+                </button>
+            </div>
+            <div class="absolute bottom-0 right-0 bg-black/80 text-${color}-300 text-[10px] px-2 py-1">${engineName} Result</div>
+        `;
+    }
+
+    // --- Helper: Render Video Result ---
+    function renderVideo(slotId, url, color) {
+         document.getElementById(slotId).innerHTML = `
+            <video src="${url}" controls autoplay loop class="w-full h-full object-cover"></video>
+            <button onclick="openFullscreen('${url}', 'vid')" class="absolute top-2 right-2 text-${color}-400 bg-black/50 p-2 rounded hover:text-white"><i class="fa-solid fa-expand"></i></button>
+        `;
+    }
+
+
+    // === MAIN ORCHESTRATION FUNCTION ===
+    async function igniteAllEngines() {
+        currentPrompt = document.getElementById('masterPrompt').value;
+        if(!currentPrompt) return alert("Master Prompt Required.");
+
+        // 1. Reset Slots
+        setLoading('puterSlot', 'cyan');
+        setLoading('raphaelSlot', 'pink');
+        setLoading('hordeImgSlot', 'yellow');
+
+        // 2. Fire Engines in Parallel
+        // Puter.js (Frontend)
+        puter.ai.txt2img(currentPrompt, { model: 'flux.1-dev' })
+            .then(res => renderImage('puterSlot', res.src, 'Puter.js', 'cyan'))
+            .catch(e => document.getElementById('puterSlot').innerHTML = `<span class="text-red-500 text-xs">FAILED: ${e.message}</span>`);
+
+        // Raphael AI (Backend)
+        fetch('/api/gen/raphael', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({prompt: currentPrompt}) })
+            .then(r => r.json())
+            .then(data => {
+                if(data.url) renderImage('raphaelSlot', data.url, 'Raphael API', 'pink');
+                else throw new Error(data.error || 'Unknown Error');
+            })
+            .catch(e => document.getElementById('raphaelSlot').innerHTML = `<span class="text-red-500 text-xs">FAILED: ${e.message}</span>`);
+
+        // AI Horde (Backend Async + Polling)
+        fetch('/api/gen/horde/image/start', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({prompt: currentPrompt}) })
+            .then(r => r.json())
+            .then(data => {
+                if(data.id) pollHordeImage(data.id);
+                else throw new Error(data.error);
+            })
+            .catch(e => document.getElementById('hordeImgSlot').innerHTML = `<span class="text-red-500 text-xs">FAILED: ${e.message}</span>`);
+    }
+
+    // --- Horde Polling Logic ---
+    function pollHordeImage(id) {
+        let attempts = 0;
+        const poll = setInterval(() => {
+            attempts++;
+             document.getElementById('hordeImgSlot').innerHTML = `<div class="text-yellow-500 text-xs text-center animate-pulse">Horde Swarm Processing...<br>Tick: ${attempts}</div>`;
+            if(attempts > 60) { clearInterval(poll); document.getElementById('hordeImgSlot').innerHTML = `<span class="text-red-500 text-xs">TIMEOUT</span>`; return; }
+
+            fetch(`/api/gen/horde/image/check/${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if(data.status === 'done') {
+                        clearInterval(poll);
+                        renderImage('hordeImgSlot', data.url, 'AI Horde Swarm', 'yellow');
+                    }
+                });
+        }, 2000); // Check every 2s
+    }
+
+
+    // === VIDEO ORCHESTRATION ===
+    function selectForVideo(url) {
+        selectedImageUrl = url;
+        window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
+        
+        // Start A2E Engine
+        setLoading('a2eSlot', 'purple');
+        document.getElementById('a2eSlot').innerHTML += '<div class="text-purple-300 text-xs mt-2">Initializing A2E Rapid Video...</div>'
+
+        fetch('/api/gen/a2e', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({image_url: url}) })
+            .then(r => r.json())
+            .then(data => {
+                if(data.url) {
+                     renderVideo('a2eSlot', data.url, 'purple');
+                     // Automatically save this successful combined result
+                     saveFinalResult(url, data.url, null);
+                }
+                else throw new Error(data.error);
+            })
+            .catch(e => document.getElementById('a2eSlot').innerHTML = `<span class="text-red-500 text-xs">A2E FAILED: ${e.message}</span>`);
+    }
+
+    // --- Final Save Logic ---
+    function saveFinalResult(imgUrl, a2eUrl, hordeUrl) {
+         fetch('/api/save_final', { 
+             method: 'POST', 
+             headers: {'Content-Type': 'application/json'}, 
+             body: JSON.stringify({prompt: currentPrompt, image_url: imgUrl, a2e_url: a2eUrl, horde_url: hordeUrl}) 
+         }).then(() => {
+             // Optional: Refresh page or show success notification to update archive list
+             console.log("Result archived successfully.");
+         });
+    }
+
+</script>
+{% endblock %}
+  
