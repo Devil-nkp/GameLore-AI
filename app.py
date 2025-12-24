@@ -1,47 +1,33 @@
 import os
-import json
-import random
-import re
 import time
 import requests
 from datetime import datetime
-from urllib.parse import quote
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from sqlalchemy.sql import func
-from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
+from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "super_secret_key_change_me")
+app.secret_key = os.getenv("SECRET_KEY", "supreme_key_123")
 
 # --- Database ---
-db_url = os.getenv("DATABASE_URL", "sqlite:///supreme_lore.db")
-if db_url.startswith("postgres://"): 
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+# Using sqlite for ease, change to postgres for production
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///supreme_ultimate.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'home'
 
-# --- Keys ---
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN") # Optional: For AI Video
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 # --- OAuth ---
 oauth = OAuth(app)
 google = oauth.register(
     name='google',
-    client_id=GOOGLE_CLIENT_ID,
-    client_secret=GOOGLE_CLIENT_SECRET,
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
     access_token_url='https://accounts.google.com/o/oauth2/token',
     access_token_params=None,
     authorize_url='https://accounts.google.com/o/oauth2/auth',
@@ -55,18 +41,18 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True)
     name = db.Column(db.String(100))
-    credits = db.Column(db.Integer, default=15) # Generous start
-    xp = db.Column(db.Integer, default=0) 
-    is_pro = db.Column(db.Boolean, default=False)
+    credits = db.Column(db.Integer, default=100) # More credits for massive gen
 
 class Generation(db.Model):
+    """Stores finalized generations that the user decided to save."""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    type = db.Column(db.String(50))
-    prompt_used = db.Column(db.Text)
-    content = db.Column(db.Text)
-    selected_image = db.Column(db.String(500))
-    video_url = db.Column(db.String(500))
+    prompt = db.Column(db.Text)
+    # We store the "best" image picked by user
+    main_image_url = db.Column(db.Text)
+    # We store related videos
+    a2e_video_url = db.Column(db.Text)
+    horde_video_url = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader
@@ -76,170 +62,150 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# --- Logic: Prompt Architect ---
-def construct_precision_prompt(content_type, genre, details):
-    """Enforces strict visual rules based on asset type."""
-    base = f"{genre} style, {details}"
-    if content_type == "Weapon":
-        return f"isolated single weapon asset, {base}, 3d render, blender style, plain white background, high detail, no characters, no hands"
-    elif content_type == "Item":
-        return f"isolated game item icon, {base}, digital painting, magical glow, plain background, centric composition, no text"
-    elif content_type == "NPC":
-        return f"character concept art, portrait of {base}, looking at camera, detailed face, upper body, rpg style, dynamic lighting"
-    elif content_type == "Location":
-        return f"wide shot, environmental concept art, {base}, atmospheric, cinematic lighting, unreal engine 5, 8k"
-    return base
+# ===========================
+# === AI ENGINE FUNCTIONS ===
+# ===========================
 
-def clean_text(text):
-    text = re.sub(r'\*\*|__', '', text) 
-    text = re.sub(r'#+', '', text)
-    text = re.sub(r'^\s*-\s+', '• ', text, flags=re.MULTILINE)
-    return text.strip()
-
-# --- Logic: Generators ---
-def generate_images_pollinations(prompt, count=4):
-    images = []
-    encoded = quote(prompt)
-    for i in range(count):
-        seed = random.randint(1, 99999)
-        # Using 'Flux-Realism' for higher quality
-        url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&seed={seed}&nologo=true&model=Flux-Realism"
-        images.append(url)
-    return images
-
-def generate_lore_groq(content_type, genre, details):
-    if not GROQ_API_KEY: return "Error: GROQ_API_KEY missing."
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-    sys_prompt = "You are a Game Lore Expert. Output plain text. No markdown. Structure: 1. Visuals 2. History 3. Abilities."
-    user_prompt = f"Write lore for a {content_type} in {genre}. Context: {details}"
-    data = {"model": "llama-3.1-8b-instant", "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": user_prompt}], "temperature": 0.7}
+def generate_raphael(prompt):
+    key = os.getenv("RAPHAEL_KEY")
+    if not key: return {"error": "Raphael Key Missing"}
     try:
-        res = requests.post(url, headers=headers, json=data)
-        if res.status_code == 200: return clean_text(res.json()['choices'][0]['message']['content'])
-    except: return "Lore generation failed."
-    return "Error"
+        headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+        # Adjust endpoint based on actual Raphael API docs
+        response = requests.post("https://api.raphael.app/v1/generations", json={"prompt": prompt, "model": "flux-realism"}, headers=headers, timeout=30)
+        if response.status_code == 200:
+            # Assuming response structure, adjust as needed based on actual API
+            return {"url": response.json().get('output', {}).get('url')} 
+        return {"error": f"Raphael Error: {response.text}"}
+    except Exception as e: return {"error": str(e)}
 
-def generate_video_replicate(image_url):
-    """
-    Real AI Video Generation using Stability AI via Replicate.
-    If no key is provided, returns None (Frontend handles fallback).
-    """
-    if not REPLICATE_API_TOKEN:
-        return None
-    
-    headers = {"Authorization": f"Token {REPLICATE_API_TOKEN}", "Content-Type": "application/json"}
-    
-    # Start Prediction
-    data = {
-        "version": "1446844794ad193ee054152331572c638202521c402120b08064402633000570", # SVD 1.1
-        "input": {"input_image": image_url, "video_length": "14_frames_with_svd_xt", "frames_per_second": 6}
-    }
-    
+def generate_a2e_video(image_url):
+    key = os.getenv("A2E_KEY")
+    if not key: return {"error": "A2E Key Missing"}
     try:
-        req = requests.post("https://api.replicate.com/v1/predictions", json=data, headers=headers)
-        if req.status_code != 201: return None
-        
-        prediction = req.json()
-        get_url = prediction['urls']['get']
-        
-        # Poll for result (Simple polling for demo)
-        for _ in range(20): # Wait up to 20 seconds (usually takes more, but this is a demo)
-            time.sleep(2)
-            check = requests.get(get_url, headers=headers).json()
-            if check['status'] == 'succeeded':
-                return check['output']
-            if check['status'] == 'failed':
-                return None
-    except:
-        return None
-    return None
+        headers = {"x-api-key": key, "Content-Type": "application/json"}
+        # Adjust endpoint based on A2E docs
+        response = requests.post("https://api.a2e.ai/v1/image-to-video", json={"image_url": image_url}, headers=headers, timeout=30)
+        if response.status_code == 200:
+            return {"url": response.json().get('video_url')}
+        return {"error": f"A2E Error: {response.text}"}
+    except Exception as e: return {"error": str(e)}
 
-# --- Routes ---
+# --- AI Horde (Async Engines) ---
+HORDE_API_KEY = os.getenv("HORDE_KEY", "0000000000") # Default anonymous
+HORDE_BASE = "https://stablehorde.net/api/v2"
+
+def horde_start_gen(payload, type='image'):
+    headers = {"apikey": HORDE_API_KEY, "Content-Type": "application/json"}
+    endpoint = "/generate/async" if type == 'image' else "/generate/video/async"
+    try:
+        resp = requests.post(f"{HORDE_BASE}{endpoint}", json=payload, headers=headers)
+        if resp.status_code == 202: return {"id": resp.json()['id']}
+        return {"error": resp.text}
+    except Exception as e: return {"error": str(e)}
+
+def horde_check_status(gen_id, type='image'):
+    endpoint = "/generate/status" if type == 'image' else "/generate/video/status"
+    try:
+        resp = requests.get(f"{HORDE_BASE}{endpoint}/{gen_id}")
+        data = resp.json()
+        if data['done']:
+            # Cleanup: Horde image results are often temporary urls or base64
+            result_url = data['generations'][0]['img'] 
+            return {"status": "done", "url": result_url}
+        return {"status": "processing", "wait": data.get('wait_time', 10)}
+    except Exception as e: return {"error": str(e)}
+
+
+# ===========================
+# === ROUTES & API ENDPOINTS ===
+# ===========================
+
+# --- Standard Page Routes (Login, Hub, History) ---
+# (Keep these mostly the same as before)
 @app.route('/')
-def home():
-    if current_user.is_authenticated: return redirect(url_for('dashboard'))
-    return render_template('home.html')
-
-@app.route('/about')
-def about(): return render_template('about.html')
-
-@app.route('/login/google')
-def google_login():
-    redirect_uri = url_for('google_auth', _external=True)
-    return google.authorize_redirect(redirect_uri)
+def login():
+    if current_user.is_authenticated: return redirect(url_for('hub'))
+    return render_template('login.html')
 
 @app.route('/auth/google')
 def google_auth():
+    # MOCK LOGIN for easy testing if no keys set
+    if not os.getenv("GOOGLE_CLIENT_ID"):
+        user = User.query.first() or User(email="demo@test.com", name="Supreme Commander"); db.session.add(user); db.session.commit()
+        login_user(user)
+        return redirect(url_for('hub'))
+    # Real Login
     token = google.authorize_access_token()
     user_info = google.get('userinfo').json()
     user = User.query.filter_by(email=user_info['email']).first()
-    if not user:
-        user = User(email=user_info['email'], name=user_info.get('name', 'Creator'))
-        db.session.add(user)
-        db.session.commit()
+    if not user: user = User(email=user_info['email'], name=user_info.get('name', 'User')); db.session.add(user); db.session.commit()
     login_user(user)
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('hub'))
+
+@app.route('/login/google')
+def google_login_start():
+    if not os.getenv("GOOGLE_CLIENT_ID"): return redirect(url_for('google_auth'))
+    return google.authorize_redirect(url_for('google_auth', _external=True))
 
 @app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('home'))
+def logout(): logout_user(); return redirect(url_for('login'))
 
-@app.route('/dashboard')
+@app.route('/hub')
 @login_required
-def dashboard():
-    gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).all()
-    return render_template('dashboard.html', user=current_user, gens=gens)
+def hub():
+    gens = Generation.query.filter_by(user_id=current_user.id).order_by(Generation.timestamp.desc()).limit(20).all()
+    return render_template('hub.html', user=current_user, history=gens)
 
-# PHASE 1: Visuals
-@app.route('/generate_visuals', methods=['GET', 'POST'])
+@app.route('/history/<int:gen_id>')
 @login_required
-def generate_visuals():
-    if request.method == 'GET': return render_template('generate.html')
-    data = request.form
-    precise_prompt = construct_precision_prompt(data.get('type'), data.get('genre'), data.get('details'))
-    image_urls = generate_images_pollinations(precise_prompt, count=4)
-    return render_template('partials/image_selection.html', 
-                           images=image_urls, prompt_base=precise_prompt,
-                           c_type=data.get('type'), c_genre=data.get('genre'), c_details=data.get('details'))
+def history_detail(gen_id):
+    gen = Generation.query.get_or_404(gen_id)
+    if gen.user_id != current_user.id: return "Unauthorized", 403
+    return render_template('history_detail.html', gen=gen)
 
-# PHASE 2: Finalize
-@app.route('/finalize_creation', methods=['POST'])
+# --- API Endpoints (Called by Frontend JS) ---
+
+@app.route('/api/gen/raphael', methods=['POST'])
 @login_required
-def finalize_creation():
-    data = request.form
-    selected_image = data.get('selected_image')
-    lore = generate_lore_groq(data.get('type'), data.get('genre'), data.get('details'))
-    
-    gen = Generation(user_id=current_user.id, type=data.get('type'), prompt_used=data.get('prompt_base'), content=lore, selected_image=selected_image)
-    if not current_user.is_pro: current_user.credits -= 1
-    current_user.xp += 20
+def api_gen_raphael():
+    prompt = request.json.get('prompt')
+    return jsonify(generate_raphael(prompt))
+
+@app.route('/api/gen/horde/image/start', methods=['POST'])
+@login_required
+def api_horde_img_start():
+    prompt = request.json.get('prompt')
+    # Basic Horde payload
+    payload = {"prompt": prompt, "params": {"steps": 30, "width": 512, "height": 512}}
+    return jsonify(horde_start_gen(payload, 'image'))
+
+@app.route('/api/gen/horde/image/check/<id>', methods=['GET'])
+def api_horde_img_check(id):
+    return jsonify(horde_check_status(id, 'image'))
+
+# Simplified Video flow: Frontend sends image URL directly
+@app.route('/api/gen/a2e', methods=['POST'])
+@login_required
+def api_gen_a2e():
+    img_url = request.json.get('image_url')
+    return jsonify(generate_a2e_video(img_url))
+
+# Final Save (When user picks the best result)
+@app.route('/api/save_final', methods=['POST'])
+@login_required
+def save_final():
+    data = request.json
+    gen = Generation(
+        user_id=current_user.id,
+        prompt=data.get('prompt'),
+        main_image_url=data.get('image_url'),
+        a2e_video_url=data.get('a2e_url'),
+        horde_video_url=data.get('horde_url')
+    )
     db.session.add(gen)
     db.session.commit()
-    return render_template('partials/final_result.html', gen=gen)
-
-# PHASE 3: Video
-@app.route('/create_video/<int:gen_id>', methods=['POST'])
-@login_required
-def create_video(gen_id):
-    gen = Generation.query.get_or_404(gen_id)
-    video_url = generate_video_replicate(gen.selected_image)
-    
-    if video_url:
-        gen.video_url = video_url
-        db.session.commit()
-        return f"""<video src="{video_url}" controls autoplay loop class="w-full rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]"></video>"""
-    else:
-        # Fallback Ken Burns Effect
-        return f"""
-        <div class="relative w-full aspect-square overflow-hidden rounded-lg border border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]">
-            <img src="{gen.selected_image}" class="w-full h-full object-cover animate-ken-burns">
-            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Simulated Motion</div>
-        </div>
-        <style>.animate-ken-burns {{ animation: ken-burns 15s ease-in-out infinite alternate; }} @keyframes ken-burns {{ 0% {{ transform: scale(1); }} 100% {{ transform: scale(1.1) translate(-2%, -2%); }} }}</style>
-        """
+    return jsonify({"status": "saved", "id": gen.id})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
