@@ -3,40 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameLore Supreme</title>
+    <title>VISUAL.AI // SUPREME</title>
+    <script src="https://js.puter.com/v2/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Immersive Dark Mode */
-        body { background-color: #0f111a; }
-        .glass { background: rgba(20, 20, 25, 0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .glow-text { text-shadow: 0 0 25px rgba(168, 85, 247, 0.6); }
-        .htmx-indicator { display:none; }
-        .htmx-request .htmx-indicator { display:inline; }
-        [x-cloak] { display: none !important; }
+        body { background-color: #050505; color: #e0e0e0; font-family: 'Courier New', monospace; }
+        .sci-fi-border { border: 1px solid rgba(0, 255, 255, 0.3); box-shadow: 0 0 10px rgba(0, 255, 255, 0.1); }
+        .glass { background: rgba(10, 20, 30, 0.8); backdrop-filter: blur(10px); }
+        .glow-text { text-shadow: 0 0 10px #00ffff; }
+        .btn-sci {
+            background: linear-gradient(45deg, #004444, #008888);
+            border: 1px solid #00ffff;
+            color: white;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .btn-sci:hover { background: #00ffff; color: black; box-shadow: 0 0 20px #00ffff; }
+        .loader { border-top-color: #00ffff; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="text-slate-100 font-sans antialiased min-h-screen flex flex-col">
-    <nav class="p-4 flex justify-between items-center glass sticky top-0 z-50 h-16">
-        <a href="/" class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text tracking-tighter">GL.AI</a>
-        <div class="flex gap-4 items-center">
-            {% if current_user.is_authenticated %}
-                <div class="hidden md:flex flex-col items-end text-xs mr-2">
-                    <span class="text-purple-400 font-bold">{{ current_user.name }}</span>
-                    <span class="text-slate-500">{{ current_user.credits }} Cr</span>
-                </div>
-                <a href="/dashboard" class="text-sm font-medium hover:text-white transition">Hub</a>
-                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-1.5 rounded-full font-bold text-xs shadow-lg shadow-purple-900/40 transition">Create</a>
-                <a href="/logout" class="text-slate-500 hover:text-red-400 text-sm">Exit</a>
-            {% else %}
-                <a href="/login/google" class="bg-white text-slate-900 px-4 py-1.5 rounded-full font-bold text-xs">Login</a>
-            {% endif %}
-        </div>
-    </nav>
-
-    <main class="flex-1 w-full flex flex-col">
-        {% block content %}{% endblock %}
-    </main>
+<body class="min-h-screen flex flex-col">
+    {% block content %}{% endblock %}
+    
+    <script>
+        // Global Modal Logic for Full Screen
+        function openFullscreen(src, type) {
+            const modal = document.createElement('div');
+            modal.className = "fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4";
+            modal.innerHTML = `
+                <button onclick="this.parentElement.remove()" class="absolute top-5 right-5 text-red-500 text-4xl"><i class="fa-solid fa-xmark"></i></button>
+                ${type === 'img' ? `<img src="${src}" class="max-h-full max-w-full border-2 border-cyan-500 box-shadow-xl">` : 
+                `<video src="${src}" controls autoplay loop class="max-h-full max-w-full border-2 border-cyan-500"></video>`}
+            `;
+            document.body.appendChild(modal);
+        }
+    </script>
 </body>
 </html>
