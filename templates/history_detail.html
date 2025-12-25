@@ -1,55 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="p-6 max-w-5xl mx-auto pb-20">
-    <a href="/hub" class="text-cyan-500 hover:text-white mb-6 inline-block font-bold btn-sci px-4 py-2 rounded">
-        <i class="fa-solid fa-arrow-left"></i> RETURN TO COMMAND HUB
+<div class="p-6 max-w-4xl mx-auto">
+    <a href="/hub" class="text-cyan-500 hover:text-white mb-6 inline-block font-bold">
+        <i class="fa-solid fa-arrow-left"></i> BACK
     </a>
 
     <div class="glass sci-fi-border rounded-xl p-8">
-        <div class="border-b border-cyan-800 pb-4 mb-6 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-white tracking-wider">ARCHIVE LOG #{{ gen.id }}</h1>
-            <span class="text-cyan-600 font-mono text-sm">{{ gen.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
-        </div>
+        <h1 class="text-2xl font-bold text-white mb-4">GENERATION LOG #{{ gen.id }}</h1>
+        <p class="mb-4 text-cyan-200 font-mono text-sm bg-black p-2 rounded">{{ gen.prompt }}</p>
 
-        <div class="grid md:grid-cols-2 gap-8">
+        <div class="grid md:grid-cols-3 gap-4">
+            {% if gen.puter_image_url %}
             <div>
-                <h3 class="text-cyan-400 font-bold mb-2 text-sm tracking-widest">PRIMARY VISUAL OUTPUT</h3>
-                <div class="relative group border-2 border-cyan-500/50 rounded-lg overflow-hidden bg-black">
-                    <img src="{{ gen.main_image_url }}" class="w-full object-contain">
-                    <button onclick="openFullscreen('{{ gen.main_image_url }}', 'img')" class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white">
-                        <i class="fa-solid fa-expand fa-3x text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.8)]"></i>
-                    </button>
-                </div>
-                <div class="mt-4 bg-black/50 p-4 rounded border border-cyan-900 font-mono text-sm text-cyan-200">
-                    <span class="text-cyan-600 block text-xs mb-1">PROMPT DATA:</span>
-                    {{ gen.prompt }}
-                </div>
+                <h4 class="text-cyan-400 text-xs font-bold mb-2">PUTER.JS OUTPUT</h4>
+                <img src="{{ gen.puter_image_url }}" class="w-full rounded border border-cyan-800" onclick="openFullscreen(this.src)">
             </div>
+            {% endif %}
 
-            <div class="space-y-6">
-                <h3 class="text-purple-400 font-bold mb-2 text-sm tracking-widest">TEMPORAL SYNTHESIS OUTPUTS</h3>
-                
-                {% if gen.a2e_video_url %}
-                <div class="sci-fi-border rounded-lg p-4 bg-black/40 border-purple-900/50">
-                    <h4 class="text-purple-300 text-xs font-bold mb-2"><i class="fa-solid fa-bolt"></i> A2E RAPID VIDEO ENGINE</h4>
-                    <div class="relative group rounded overflow-hidden border border-purple-500/30">
-                         <video src="{{ gen.a2e_video_url }}" controls loop class="w-full"></video>
-                         <button onclick="openFullscreen('{{ gen.a2e_video_url }}', 'vid')" class="absolute top-2 right-2 bg-black/70 text-purple-400 p-2 rounded hover:text-white opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-expand"></i></button>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if gen.horde_video_url %}
-                <div class="sci-fi-border rounded-lg p-4 bg-black/40 border-gray-700">
-                     <h4 class="text-gray-400 text-xs font-bold mb-2"><i class="fa-solid fa-hourglass"></i> HORDE ASYNC VIDEO</h4>
-                     <video src="{{ gen.horde_video_url }}" controls loop class="w-full rounded border border-gray-600"></video>
-                </div>
-                {% elif not gen.a2e_video_url %}
-                 <div class="p-6 border border-dashed border-purple-800/50 rounded text-center text-purple-500/50 text-sm italic">
-                    No temporal data generated for this entry.
-                 </div>
-                {% endif %}
+            {% if gen.evolink_image_url %}
+            <div>
+                <h4 class="text-pink-400 text-xs font-bold mb-2">EVOLINK OUTPUT</h4>
+                <img src="{{ gen.evolink_image_url }}" class="w-full rounded border border-pink-800" onclick="openFullscreen(this.src)">
             </div>
+            {% endif %}
+
+            {% if gen.horde_image_url %}
+            <div>
+                <h4 class="text-yellow-400 text-xs font-bold mb-2">HORDE OUTPUT</h4>
+                <img src="{{ gen.horde_image_url }}" class="w-full rounded border border-yellow-800" onclick="openFullscreen(this.src)">
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
