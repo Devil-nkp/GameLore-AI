@@ -1,0 +1,20 @@
+<div class="animate-fade-in-up">
+    <h2 class="text-center text-xl font-bold mb-6">Select Concept</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {% for img in images %}
+        <form hx-post="/finalize_creation" hx-target="#output-stage" class="cursor-pointer relative group">
+            <input type="hidden" name="selected_image" value="{{ img }}">
+            <input type="hidden" name="type" value="{{ c_type }}">
+            <input type="hidden" name="genre" value="{{ c_genre }}">
+            <input type="hidden" name="details" value="{{ c_details }}">
+            <input type="hidden" name="prompt_base" value="{{ prompt_base }}">
+            <button class="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-700 hover:border-purple-500 transition">
+                <img src="{{ img }}" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span class="bg-purple-600 px-4 py-2 rounded-full font-bold text-sm">Analyze</span>
+                </div>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
