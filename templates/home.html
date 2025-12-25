@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="relative overflow-hidden text-center py-24 px-4">
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[100px] -z-10"></div>
+    
+    <h1 class="text-6xl md:text-8xl font-extrabold tracking-tight mb-6">
+        <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 glow-text">
+            GameLore.AI
+        </span>
+    </h1>
+    
+    <p class="text-xl md:text-2xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+        The ultimate engine for assets, lore, and video generation.
+        <br><span class="text-sm text-purple-400 font-mono">POWERED BY EVOLINK & A2E</span>
+    </p>
+    
+    <div class="flex flex-col md:flex-row justify-center gap-4">
+        <a href="/login/google" class="px-8 py-4 bg-white text-slate-900 font-bold text-lg rounded-xl shadow-lg hover:scale-105 transition hover:shadow-purple-500/50">
+            Start Creating
+        </a>
+        <a href="/about" class="px-8 py-4 border border-slate-600 text-slate-300 font-bold text-lg rounded-xl hover:bg-slate-800 transition">
+            System Status
+        </a>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8 mt-20 max-w-6xl mx-auto text-left">
+        <div class="glass p-8 rounded-2xl border border-white/5">
+            <div class="text-4xl mb-4">🎨</div>
+            <h3 class="text-xl font-bold text-white mb-2">Hybrid Visuals</h3>
+            <p class="text-slate-400">Combines Evolink's realism with Pollinations' unlimited generation.</p>
+        </div>
+        <div class="glass p-8 rounded-2xl border border-white/5">
+            <div class="text-4xl mb-4">🎥</div>
+            <h3 class="text-xl font-bold text-white mb-2">Neural Video</h3>
+            <p class="text-slate-400">Instantly animate any asset using the A2E rapid video engine.</p>
+        </div>
+        <div class="glass p-8 rounded-2xl border border-white/5">
+            <div class="text-4xl mb-4">🧠</div>
+            <h3 class="text-xl font-bold text-white mb-2">Deep Lore</h3>
+            <p class="text-slate-400">Context-aware backstory generation for every asset you create.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
