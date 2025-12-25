@@ -3,43 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VISUAL.AI // SUPREME</title>
-    <script src="https://js.puter.com/v2/"></script>
+    <title>GameLore Supreme</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <style>
-        body { background-color: #050505; color: #e0e0e0; font-family: 'Courier New', monospace; }
-        .sci-fi-border { border: 1px solid rgba(0, 255, 255, 0.3); box-shadow: 0 0 10px rgba(0, 255, 255, 0.1); }
-        .glass { background: rgba(10, 20, 30, 0.8); backdrop-filter: blur(10px); }
-        .glow-text { text-shadow: 0 0 10px #00ffff; }
-        .btn-sci {
-            background: linear-gradient(45deg, #004444, #008888);
-            border: 1px solid #00ffff;
-            color: white;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        .btn-sci:hover { background: #00ffff; color: black; box-shadow: 0 0 20px #00ffff; }
-        .loader { border-top-color: #00ffff; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background-color: #0f111a; color: white; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-text { text-shadow: 0 0 30px rgba(168, 85, 247, 0.5); }
+        .htmx-indicator{ display:none; }
+        .htmx-request .htmx-indicator{ display:inline; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
-    {% block content %}{% endblock %}
-    
-    <script>
-        // Global Modal Logic for Full Screen
-        function openFullscreen(src, type) {
-            const modal = document.createElement('div');
-            modal.className = "fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4";
-            modal.innerHTML = `
-                <button onclick="this.parentElement.remove()" class="absolute top-5 right-5 text-red-500 text-4xl"><i class="fa-solid fa-xmark"></i></button>
-                ${type === 'img' ? `<img src="${src}" class="max-h-full max-w-full border-2 border-cyan-500 box-shadow-xl">` : 
-                `<video src="${src}" controls autoplay loop class="max-h-full max-w-full border-2 border-cyan-500"></video>`}
-            `;
-            document.body.appendChild(modal);
-        }
-    </script>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+    <nav class="p-4 flex justify-between items-center glass sticky top-0 z-50">
+        <a href="/" class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text">GL.AI</a>
+        <div class="flex gap-4 items-center">
+            {% if current_user.is_authenticated %}
+                <span class="text-xs text-purple-400 font-bold hidden md:inline">{{ current_user.name }}</span>
+                <a href="/dashboard" class="hover:text-white transition text-sm">Hub</a>
+                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm">Create</a>
+                <a href="/logout" class="text-slate-500 hover:text-red-400 text-sm">Exit</a>
+            {% else %}
+                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm">Login</a>
+            {% endif %}
+        </div>
+    </nav>
+    <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>
