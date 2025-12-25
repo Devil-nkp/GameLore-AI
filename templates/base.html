@@ -22,10 +22,10 @@
             {% if current_user.is_authenticated %}
                 <span class="text-xs text-purple-400 font-bold hidden md:inline">{{ current_user.name }}</span>
                 <a href="/dashboard" class="hover:text-white transition text-sm">Hub</a>
-                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm">Create</a>
+                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-purple-900/20">Create</a>
                 <a href="/logout" class="text-slate-500 hover:text-red-400 text-sm">Exit</a>
             {% else %}
-                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm">Login</a>
+                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm text-black">Login</a>
             {% endif %}
         </div>
     </nav>
