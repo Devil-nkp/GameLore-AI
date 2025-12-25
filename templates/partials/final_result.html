@@ -1,16 +1,14 @@
-<div class="grid md:grid-cols-2 gap-8 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
-    <div id="video-container">
-        <img src="{{ gen.selected_image }}" class="w-full rounded-xl border border-slate-600">
-        <div class="mt-4 flex gap-2">
-            <button hx-post="/create_video/{{ gen.id }}" hx-target="#video-container" hx-indicator="#vid-load" class="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-lg font-bold">
-                Create Video
-                <img id="vid-load" src="https://cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif" class="h-4 w-4 htmx-indicator filter invert inline ml-2">
-            </button>
-            <a href="{{ gen.selected_image }}" download target="_blank" class="px-4 py-3 bg-slate-700 rounded-lg">⬇️</a>
-        </div>
-    </div>
-    <div>
-        <h3 class="text-2xl font-bold text-purple-400 mb-4">{{ gen.type }} Lore</h3>
-        <p class="text-slate-300 whitespace-pre-line">{{ gen.content }}</p>
+<div class="glass p-8 rounded-2xl border border-green-500/30 text-center animate-fade-in-up">
+    <div class="text-4xl mb-4">✅</div>
+    <h3 class="text-2xl font-bold text-white mb-2">Asset Secured</h3>
+    <p class="text-slate-400 mb-6">Your generation has been saved to the database.</p>
+    
+    <div class="flex justify-center gap-4">
+        <a href="/dashboard" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-bold transition">Go to Hub</a>
+        {% if gen.type == 'Video' %}
+            <button @click="cinemaOpen = true; cinemaSrc = '{{ gen.result_url }}'; cinemaType = 'vid'" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-bold transition">Watch Full Screen</button>
+        {% else %}
+            <a href="/video_studio" class="px-6 py-3 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-400 hover:to-red-400 rounded-lg text-white font-bold transition">Animate This</a>
+        {% endif %}
     </div>
 </div>
