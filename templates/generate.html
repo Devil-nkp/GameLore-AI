@@ -1,43 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-4xl mx-auto" x-data="{ loading: false }">
-    <div class="text-center mb-8">
-        <h1 class="text-4xl md:text-6xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 glow-text">
-            Visual Genesis
-        </h1>
-        <p class="text-slate-400">Generate High-Fidelity Assets.</p>
+    <div class="text-center mb-10">
+        <h1 class="text-5xl md:text-7xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 pb-2">Image Studio</h1>
+        <p class="text-slate-400 text-lg">Generate Dual High-Fidelity Assets.</p>
     </div>
 
-    <div class="bg-slate-900/50 border border-white/10 p-8 rounded-2xl shadow-2xl">
+    <div class="glass p-8 rounded-3xl shadow-2xl border border-white/5">
         <form hx-post="/generate_visuals" hx-target="#output-stage" @submit="loading = true" hx-on::after-request="loading = false">
-            <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Type</label>
-                    <select name="type" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 outline-none">
-                        <option value="Weapon">Weapon</option>
-                        <option value="Item">Item</option>
-                        <option value="NPC">Character</option>
-                        <option value="Location">Location</option>
+                    <label class="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2 block">Asset Class</label>
+                    <select name="type" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-purple-500 transition">
+                        <option value="Weapon">⚔️ Legendary Weapon</option>
+                        <option value="Character">👤 Hero / NPC</option>
+                        <option value="Environment">🌍 World / Location</option>
+                        <option value="Item">💎 Artifact / Item</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2 text-purple-300">Style</label>
-                    <input type="text" name="genre" placeholder="e.g. Cyberpunk" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3">
+                    <label class="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2 block">Art Style</label>
+                    <input type="text" name="genre" placeholder="e.g. Cyberpunk, Dark Fantasy" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-purple-500 transition">
                 </div>
             </div>
-            <div class="mb-6">
-                <label class="block text-sm font-bold mb-2 text-purple-300">Details</label>
-                <textarea name="details" rows="3" placeholder="Description..." class="w-full bg-slate-800 border border-slate-600 rounded-lg p-3"></textarea>
+            
+            <div class="mb-8">
+                <label class="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2 block">Visual Description</label>
+                <textarea name="details" rows="3" placeholder="Describe the glowing runes, the metallic texture, the atmosphere..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-purple-500 transition"></textarea>
             </div>
-            <button class="w-full bg-purple-600 hover:bg-purple-500 p-4 rounded-xl font-bold text-xl transition" :disabled="loading">
-                <span x-show="!loading">Generate</span>
-                <span x-show="loading">Processing...</span>
+
+            <button class="w-full py-5 rounded-2xl font-bold text-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:scale-[1.02] active:scale-95 transition shadow-lg shadow-purple-900/20 disabled:opacity-50" :disabled="loading">
+                <span x-show="!loading">✨ Initialize Generation</span>
+                <span x-show="loading" class="flex items-center justify-center gap-2">
+                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Processing...
+                </span>
             </button>
         </form>
     </div>
 
-    <div id="output-stage" class="mt-12 min-h-[400px]">
-        <div x-show="loading" class="text-center text-purple-400 animate-pulse pt-10">Forging Assets...</div>
-    </div>
+    <div id="output-stage" class="mt-12 min-h-[200px]"></div>
 </div>
 {% endblock %}
