@@ -1,0 +1,16 @@
+<div class="grid md:grid-cols-2 gap-8 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+    <div id="video-container">
+        <img src="{{ gen.selected_image }}" class="w-full rounded-xl border border-slate-600">
+        <div class="mt-4 flex gap-2">
+            <button hx-post="/create_video/{{ gen.id }}" hx-target="#video-container" hx-indicator="#vid-load" class="flex-1 bg-purple-600 hover:bg-purple-500 py-3 rounded-lg font-bold">
+                Create Video
+                <img id="vid-load" src="https://cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif" class="h-4 w-4 htmx-indicator filter invert inline ml-2">
+            </button>
+            <a href="{{ gen.selected_image }}" download target="_blank" class="px-4 py-3 bg-slate-700 rounded-lg">⬇️</a>
+        </div>
+    </div>
+    <div>
+        <h3 class="text-2xl font-bold text-purple-400 mb-4">{{ gen.type }} Lore</h3>
+        <p class="text-slate-300 whitespace-pre-line">{{ gen.content }}</p>
+    </div>
+</div>
