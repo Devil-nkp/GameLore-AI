@@ -3,34 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameLore Supreme</title>
+    <title>GL.AI Supreme V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <style>
-        body { background-color: #0f111a; color: white; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-        .glow-text { text-shadow: 0 0 30px rgba(168, 85, 247, 0.5); }
-        .htmx-indicator{ display:none; }
-        .htmx-request .htmx-indicator{ display:inline; }
+        body { background-color: #0f111a; color: white; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glow-text { text-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
+        .htmx-indicator { display:none; }
+        .htmx-request .htmx-indicator { display:inline; }
     </style>
 </head>
-<body class="font-sans antialiased min-h-screen flex flex-col">
-    <nav class="p-4 flex justify-between items-center glass sticky top-0 z-50">
-        <a href="/" class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 glow-text">GL.AI</a>
-        <div class="flex gap-4 items-center">
-            {% if current_user.is_authenticated %}
-                <span class="text-xs text-purple-400 font-bold hidden md:inline">{{ current_user.name }}</span>
-                <a href="/dashboard" class="hover:text-white transition text-sm">Hub</a>
-                <a href="/generate_visuals" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-purple-900/20">Create</a>
-                <a href="/logout" class="text-slate-500 hover:text-red-400 text-sm">Exit</a>
-            {% else %}
-                <a href="/login/google" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm text-black">Login</a>
-            {% endif %}
+<body class="min-h-screen flex flex-col" x-data="{ cinemaOpen: false, cinemaSrc: '', cinemaType: 'img' }">
+
+    <nav class="p-4 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500 tracking-tighter">GL.AI<span class="text-xs text-white/30 ml-1">V3</span></a>
+            <div class="flex gap-4 items-center">
+                {% if current_user.is_authenticated %}
+                    <div class="hidden md:flex gap-4 mr-4 text-sm font-medium">
+                        <a href="/generate_visuals" class="text-slate-300 hover:text-white transition">Image Studio</a>
+                        <a href="/video_studio" class="text-purple-400 hover:text-purple-300 transition glow-text">Video Studio</a>
+                    </div>
+                    <a href="/dashboard" class="glass px-4 py-2 rounded-full text-xs font-bold hover:bg-white/5 transition">HUB</a>
+                    <a href="/logout" class="text-slate-500 hover:text-red-400 text-xs">EXIT</a>
+                {% else %}
+                    <a href="/login/google" class="bg-white text-black px-4 py-2 rounded-lg font-bold text-xs hover:scale-105 transition">LOGIN</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
+
     <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8">
         {% block content %}{% endblock %}
     </main>
+
+    <div x-show="cinemaOpen" 
+         x-transition.opacity 
+         class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
+         style="display: none;">
+        
+        <button @click="cinemaOpen = false" class="absolute top-6 right-6 text-white/50 hover:text-white transition">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="relative max-w-7xl max-h-[90vh] w-full flex items-center justify-center">
+            <img x-show="cinemaType === 'img'" :src="cinemaSrc" class="max-h-[85vh] max-w-full rounded-lg shadow-2xl border border-white/10">
+            <video x-show="cinemaType === 'vid'" :src="cinemaSrc" controls autoplay loop class="max-h-[85vh] max-w-full rounded-lg shadow-2xl border border-purple-500/30"></video>
+        </div>
+    </div>
+
 </body>
 </html>
