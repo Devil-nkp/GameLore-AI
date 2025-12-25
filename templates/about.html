@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto py-16 text-center">
+    <h1 class="text-5xl font-extrabold text-white mb-8">System Architecture</h1>
+    
+    <div class="grid md:grid-cols-2 gap-8 text-left">
+        <div class="glass p-8 rounded-2xl border border-purple-500/20">
+            <h2 class="text-xl font-bold text-purple-400 mb-4">Primary Visual Engine</h2>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <strong>Evolink API:</strong> High-fidelity realism (Flux-Realism).
+                </li>
+                <li class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                    <strong>Pollinations Fallback:</strong> Unlimited generation queue.
+                </li>
+            </ul>
+        </div>
+
+        <div class="glass p-8 rounded-2xl border border-blue-500/20">
+            <h2 class="text-xl font-bold text-blue-400 mb-4">Temporal Engine</h2>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <strong>A2E Rapid Video:</strong> Image-to-Video synthesis.
+                </li>
+                <li class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <strong>Ken Burns Sim:</strong> CSS-based motion fallback.
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="mt-12">
+        <p class="text-slate-500 text-sm">System Version: Supreme 2.1 (Restored Interface)</p>
+    </div>
+</div>
+{% endblock %}
